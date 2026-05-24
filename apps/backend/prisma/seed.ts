@@ -71,6 +71,7 @@ async function main() {
   await prisma.service.deleteMany({ where: { organizationId: demoOrg.id } });
   await prisma.resource.deleteMany({ where: { organizationId: demoOrg.id } });
   await prisma.lead.deleteMany({ where: { organizationId: demoOrg.id } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [admin.id, manager.id] } } });
   await prisma.contact.deleteMany({ where: { organizationId: demoOrg.id } });
   await prisma.company.deleteMany({ where: { organizationId: demoOrg.id } });
   await prisma.tag.deleteMany({ where: { organizationId: demoOrg.id } });
@@ -958,6 +959,95 @@ async function main() {
     }),
   ]);
   console.log('✅ Automations: 3');
+
+  // ── Уведомления ──
+  const minute = 60 * 1000;
+  await Promise.all([
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'lead_created',
+        title: 'Новый лид',
+        content: 'Поступила заявка: AsiaCorp International — enterprise licence на 200+ пользователей',
+        isRead: false,
+        createdAt: new Date(now - 5 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'deal_stage_changed',
+        title: 'Сделка в оплате',
+        content: 'Сделка "Accounting automation" перешла на этап Payment',
+        isRead: false,
+        createdAt: new Date(now - 30 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'task_overdue',
+        title: 'Просроченная задача',
+        content: 'Задача "Send contract for signing" просрочена',
+        isRead: false,
+        createdAt: new Date(now - 2 * 60 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'contact_created',
+        title: 'Новый контакт',
+        content: 'Niran Wongsiri добавил контакт Anong Pongsri (Phuket Beauty)',
+        isRead: false,
+        createdAt: new Date(now - 4 * 60 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'task_assigned',
+        title: 'Назначена задача',
+        content: 'Вам назначена задача "Monthly sales report"',
+        isRead: true,
+        readAt: new Date(now - 50 * minute),
+        createdAt: new Date(now - 6 * 60 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: admin.id,
+        type: 'deal_won',
+        title: 'Сделка выиграна!',
+        content: 'Сделка "Staff training program" закрыта успешно на ฿85 000',
+        isRead: true,
+        readAt: new Date(now - 20 * 60 * minute),
+        createdAt: new Date(now - 24 * 60 * minute),
+      },
+    }),
+    // Для менеджера — пара уведомлений
+    prisma.notification.create({
+      data: {
+        userId: manager.id,
+        type: 'task_assigned',
+        title: 'Назначена задача',
+        content: 'Вам назначена задача "Call Somsak about the proposal"',
+        isRead: false,
+        createdAt: new Date(now - 45 * minute),
+      },
+    }),
+    prisma.notification.create({
+      data: {
+        userId: manager.id,
+        type: 'deal_created',
+        title: 'Новая сделка',
+        content: 'Создана сделка "CRM implementation" на ฿250 000',
+        isRead: false,
+        createdAt: new Date(now - 3 * 60 * minute),
+      },
+    }),
+  ]);
+  console.log('✅ Notifications: 8');
 
   console.log('\n🎉 Database seeded!\n');
   console.log('📋 Credentials:');

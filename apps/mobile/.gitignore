@@ -1,0 +1,30 @@
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+/ios
+/android
+
+# Metro
+.metro-health-check*
+
+# Dependencies
+node_modules/
+
+# Env
+.env
+.env.local
+
+# Misc
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# EAS / credentials
+google-service-account.json
+*.p8
+*.p12
+*.mobileprovision

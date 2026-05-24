@@ -87,7 +87,7 @@ export default function LeadsPage() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskPrefillTitle, setTaskPrefillTitle] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("list");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -719,7 +719,7 @@ export default function LeadsPage() {
 
                       {/* Dropdown Menu */}
                       {openDropdown === lead.id && (
-                        <div className="absolute left-0 top-full mt-1 w-64 glass-card rounded-xl shadow-lg border border-white/10 py-1 z-50">
+                        <div className="absolute left-0 top-full mt-1 w-64 bg-[#1a1a2e] backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 z-50">
                           <button
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                             onClick={() => handleEditLead(lead)}
@@ -765,7 +765,7 @@ export default function LeadsPage() {
                               <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
                             </button>
                             {openSubmenu === "create" && (
-                              <div className="absolute left-full top-0 ml-1 w-48 glass-card rounded-xl shadow-lg border border-white/10 py-1 z-50">
+                              <div className="absolute left-full top-0 ml-1 w-48 bg-[#1a1a2e] backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 z-50">
                                 <button
                                   className="w-full flex items-center px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                                   onClick={() => handleConvertToDeal(lead)}
@@ -802,7 +802,7 @@ export default function LeadsPage() {
                               <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
                             </button>
                             {openSubmenu === "schedule" && (
-                              <div className="absolute left-full top-0 ml-1 w-48 glass-card rounded-xl shadow-lg border border-white/10 py-1 z-50">
+                              <div className="absolute left-full top-0 ml-1 w-48 bg-[#1a1a2e] backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 py-1 z-50">
                                 <button
                                   className="w-full flex items-center px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                                   onClick={() => handleScheduleTask(lead, "call")}

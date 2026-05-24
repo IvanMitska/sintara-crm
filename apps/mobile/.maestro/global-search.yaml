@@ -1,0 +1,13 @@
+# E2E (ТЗ §18): глобальный поиск по сущностям.
+appId: com.sintara.crm.mobile
+---
+- runFlow: login.yaml
+- tapOn:
+    accessibilityText: 'Поиск'
+- assertVisible: 'Поиск'
+- inputText: 'а'
+- inputText: 'б'
+# Результаты подгружаются по debounce — проверяем, что экран не упал
+- assertVisible: 'Поиск'
+- tapOn: 'Отмена'
+- assertVisible: 'Сегодня'

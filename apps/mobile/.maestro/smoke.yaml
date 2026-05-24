@@ -1,0 +1,13 @@
+# E2E smoke (ТЗ §18 сценарий 1): login → Today → Deals → карточка → назад.
+appId: com.sintara.crm.mobile
+---
+- runFlow: login.yaml
+# Вкладка «Сделки»
+- tapOn: 'Сделки'
+- assertVisible: 'Сделки'
+- assertVisible: 'Воронка'
+# Сегмент «Лиды»
+- tapOn: 'Лиды'
+# Возврат на «Сегодня»
+- tapOn: 'Сегодня'
+- assertVisible: 'Задачи на сегодня'

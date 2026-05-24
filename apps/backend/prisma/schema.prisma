@@ -34,6 +34,18 @@ enum ContactSource {
   OTHER
 }
 
+enum DealPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DealTemperature {
+  HOT
+  WARM
+  COLD
+}
+
 enum DealStatus {
   NEW
   QUALIFICATION
@@ -423,15 +435,19 @@ model Stage {
 }
 
 model Deal {
-  id           String     @id @default(cuid())
-  title        String
-  amount       Decimal    @db.Decimal(15, 2)
-  currency     String     @default("RUB")
-  probability  Int        @default(50)
-  expectedDate DateTime?
-  status       DealStatus @default(NEW)
-  description  String?
-  customFields Json?
+  id             String           @id @default(cuid())
+  title          String
+  amount         Decimal          @db.Decimal(15, 2)
+  currency       String           @default("RUB")
+  probability    Int              @default(50)
+  expectedDate   DateTime?
+  status         DealStatus       @default(NEW)
+  priority       DealPriority     @default(MEDIUM)
+  temperature    DealTemperature?
+  tags           String[]         @default([])
+  lastActivityAt DateTime?
+  description    String?
+  customFields   Json?
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)

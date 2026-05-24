@@ -1,0 +1,10 @@
+# E2E (ТЗ §18): выход из аккаунта через drawer профиля.
+appId: com.sintara.crm.mobile
+---
+- runFlow: login.yaml
+# Открыть drawer профиля (аватар в шапке)
+- tapOn:
+    accessibilityText: 'Профиль'
+- assertVisible: 'Сменить организацию'
+- tapOn: 'Выйти'
+- assertVisible: 'С возвращением'

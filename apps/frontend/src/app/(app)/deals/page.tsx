@@ -11,17 +11,16 @@ import {
   ChevronRight,
   ChevronDown,
   Briefcase,
-  DollarSign,
-  TrendingUp,
-  Target,
   Building2,
   User,
   Calendar,
   SlidersHorizontal,
-  ArrowUpRight,
   Phone,
+  Star,
+  Settings,
   MessageSquare,
   CheckSquare,
+  Check,
   Flame,
   Thermometer,
   Snowflake,
@@ -32,12 +31,31 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { dealsApi, pipelinesApi, contactsApi, tasksApi } from "@/lib/api";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { dealsApi, pipelinesApi, contactsApi, companiesApi, tasksApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { DealModal } from "@/components/deals/DealModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
+import { PipelineManagerModal } from "@/components/pipelines/PipelineManagerModal";
 import { useCurrency } from "@/hooks/useCurrency";
+
+type DealTemperature = "HOT" | "WARM" | "COLD";
+type DealPriority = "LOW" | "MEDIUM" | "HIGH";
 
 interface Deal {
   id: string;
@@ -49,13 +67,16 @@ interface Deal {
   company?: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
-  // Extended fields for enhanced cards
-  assignee?: { id: string; name: string; avatar?: string };
-  temperature?: "hot" | "warm" | "cold";
-  hasOverdueTasks?: boolean;
-  lastActivityDays?: number;
+  lastActivityAt?: string | null;
+  priority?: DealPriority;
+  temperature?: DealTemperature | null;
   tags?: string[];
-  nextTask?: { title: string; dueDate: string; isOverdue: boolean };
+  hasOverdueTasks?: boolean;
+  overdueTasksCount?: number;
+  openTasksCount?: number;
+  nextTask?: { id: string; title: string; dueDate: string; isOverdue: boolean } | null;
+  owner?: { id: string; firstName: string; lastName: string; avatar?: string | null };
+  assignee?: { id: string; name: string; avatar?: string };
 }
 
 
@@ -63,20 +84,23 @@ interface Deal {
 type QuickFilter = "all" | "my" | "overdue" | "no-tasks" | "hot";
 
 // Temperature indicator component
-function TemperatureIndicator({ temperature }: { temperature?: "hot" | "warm" | "cold" }) {
+const TEMPERATURE_CONFIG: Record<
+  DealTemperature,
+  { icon: any; color: string; bg: string; label: string }
+> = {
+  HOT: { icon: Flame, color: "text-red-500", bg: "bg-red-500/20", label: "Горячая" },
+  WARM: { icon: Thermometer, color: "text-amber-500", bg: "bg-amber-500/20", label: "Тёплая" },
+  COLD: { icon: Snowflake, color: "text-blue-500", bg: "bg-blue-500/20", label: "Холодная" },
+};
+
+function TemperatureIndicator({ temperature }: { temperature?: DealTemperature | null }) {
   if (!temperature) return null;
-
-  const config = {
-    hot: { icon: Flame, color: "text-red-500", bg: "bg-red-500/20", label: "Горячая" },
-    warm: { icon: Thermometer, color: "text-amber-500", bg: "bg-amber-500/20", label: "Тёплая" },
-    cold: { icon: Snowflake, color: "text-blue-500", bg: "bg-blue-500/20", label: "Холодная" },
-  };
-
-  const { icon: Icon, color, bg } = config[temperature];
-
+  const cfg = TEMPERATURE_CONFIG[temperature];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
   return (
-    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", bg)}>
-      <Icon className={cn("w-3.5 h-3.5", color)} />
+    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", cfg.bg)} title={cfg.label}>
+      <Icon className={cn("w-3.5 h-3.5", cfg.color)} />
     </div>
   );
 }
@@ -118,12 +142,18 @@ function DealCard({
     return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
   };
 
-  // Mock data for demo - in real app this comes from API
-  const mockAssignee = deal.assignee || { name: "Иван М.", avatar: undefined };
-  const mockTemperature = deal.temperature || (["hot", "warm", "cold"] as const)[Math.floor(Math.random() * 3)];
-  const mockLastActivity = deal.lastActivityDays ?? Math.floor(Math.random() * 14);
-  const mockHasOverdue = deal.hasOverdueTasks ?? Math.random() > 0.7;
-  const mockTags = deal.tags || (Math.random() > 0.5 ? ["B2B", "Оборудование"] : ["Сайт"]);
+  const ownerName = deal.owner
+    ? `${deal.owner.firstName || ""} ${deal.owner.lastName?.[0] || ""}${deal.owner.lastName ? "." : ""}`.trim()
+    : deal.assignee?.name;
+  const ownerAvatar = deal.owner?.avatar ?? deal.assignee?.avatar ?? undefined;
+
+  const lastActivitySource = deal.lastActivityAt || deal.updatedAt || deal.createdAt;
+  const lastActivityDays = lastActivitySource
+    ? Math.max(0, Math.floor((Date.now() - new Date(lastActivitySource).getTime()) / 86_400_000))
+    : null;
+
+  const tags = deal.tags || [];
+  const hasOverdue = !!deal.hasOverdueTasks;
 
   return (
     <div
@@ -138,9 +168,16 @@ function DealCard({
           {deal.title}
         </h4>
         <div className="flex items-center gap-1 shrink-0">
-          <TemperatureIndicator temperature={mockTemperature} />
-          {mockHasOverdue && (
-            <div className="w-6 h-6 rounded-lg bg-red-500/20 flex items-center justify-center" title="Просроченная задача">
+          <TemperatureIndicator temperature={deal.temperature} />
+          {hasOverdue && (
+            <div
+              className="w-6 h-6 rounded-lg bg-red-500/20 flex items-center justify-center"
+              title={
+                deal.overdueTasksCount && deal.overdueTasksCount > 1
+                  ? `${deal.overdueTasksCount} просроченных задач`
+                  : "Просроченная задача"
+              }
+            >
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
             </div>
           )}
@@ -167,9 +204,9 @@ function DealCard({
       )}
 
       {/* Tags */}
-      {mockTags.length > 0 && (
+      {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {mockTags.slice(0, 3).map((tag) => (
+          {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
               className="px-2 py-0.5 bg-white/5 text-gray-300 text-xs font-medium rounded-md"
@@ -177,9 +214,9 @@ function DealCard({
               {tag}
             </span>
           ))}
-          {mockTags.length > 3 && (
+          {tags.length > 3 && (
             <span className="px-2 py-0.5 bg-white/5 text-gray-500 text-xs rounded-md">
-              +{mockTags.length - 3}
+              +{tags.length - 3}
             </span>
           )}
         </div>
@@ -188,14 +225,17 @@ function DealCard({
       {/* Footer with manager, activity, date */}
       <div className="flex items-center justify-between pt-3 border-t border-white/5">
         <div className="flex items-center gap-2">
-          <ManagerAvatar name={mockAssignee.name} avatar={mockAssignee.avatar} />
-          {mockLastActivity > 0 && (
-            <div className={cn(
-              "flex items-center gap-1 text-xs",
-              mockLastActivity > 7 ? "text-red-500" : mockLastActivity > 3 ? "text-amber-500" : "text-gray-500"
-            )}>
+          {ownerName && <ManagerAvatar name={ownerName} avatar={ownerAvatar} />}
+          {lastActivityDays !== null && lastActivityDays > 0 && (
+            <div
+              className={cn(
+                "flex items-center gap-1 text-xs",
+                lastActivityDays > 7 ? "text-red-500" : lastActivityDays > 3 ? "text-amber-500" : "text-gray-500"
+              )}
+              title="Дней с последней активности"
+            >
               <Clock className="w-3 h-3" />
-              <span>{mockLastActivity}д</span>
+              <span>{lastActivityDays}д</span>
             </div>
           )}
         </div>
@@ -237,6 +277,31 @@ function DealCard({
   );
 }
 
+// Draggable wrapper around DealCard
+function DraggableDealCard({
+  deal,
+  onClick,
+  onQuickAction,
+}: {
+  deal: Deal;
+  onClick: () => void;
+  onQuickAction: (action: string, deal: Deal) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: deal.id,
+    data: { stageId: deal.stageId },
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <DealCard deal={deal} onClick={onClick} onQuickAction={onQuickAction} />
+    </div>
+  );
+}
+
 // Kanban column component
 function KanbanColumn({
   stage,
@@ -254,19 +319,15 @@ function KanbanColumn({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const stageTotal = deals.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
   const { formatCompact } = useCurrency();
+  const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
-  // Empty state messages
-  const emptyMessages = [
-    "Перетащите сделку сюда или создайте новую",
-    "Здесь пока пусто — время исправить это!",
-    "Добавьте первую сделку на этот этап",
-  ];
-  const randomEmptyMessage = emptyMessages[Math.floor(Math.random() * emptyMessages.length)];
+  const emptyMessage = "Перетащите сделку сюда или создайте новую";
 
   return (
     <div className={cn(
-      "flex-shrink-0 glass-card rounded-2xl sm:rounded-3xl snap-start",
-      isCollapsed ? "w-16" : "w-[280px] sm:w-[320px] md:w-[340px]"
+      "flex-shrink-0 glass-card rounded-2xl sm:rounded-3xl snap-start transition-shadow",
+      isCollapsed ? "w-16" : "w-[280px] sm:w-[320px] md:w-[340px]",
+      isOver && !isCollapsed && "ring-2 ring-violet-500/60 shadow-lg shadow-violet-500/20"
     )}>
       {/* Column Header */}
       <div className="p-4 border-b border-white/5">
@@ -332,9 +393,15 @@ function KanbanColumn({
 
       {/* Cards */}
       {!isCollapsed && (
-        <div className="p-4 space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-minimal">
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "p-4 space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto scrollbar-minimal min-h-[120px] rounded-b-2xl sm:rounded-b-3xl transition-colors",
+            isOver && "bg-violet-500/5"
+          )}
+        >
           {deals.map((deal) => (
-            <DealCard
+            <DraggableDealCard
               key={deal.id}
               deal={deal}
               onClick={() => onDealClick(deal)}
@@ -347,7 +414,7 @@ function KanbanColumn({
               <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Briefcase className="w-8 h-8 text-gray-500" />
               </div>
-              <p className="text-gray-400 text-sm mb-4">{randomEmptyMessage}</p>
+              <p className="text-gray-400 text-sm mb-4 min-h-[2.5rem]">{emptyMessage}</p>
               <button
                 onClick={() => onAddDeal(stage.id)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-xl text-sm font-medium hover:bg-violet-600"
@@ -713,6 +780,7 @@ export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [contactOptions, setContactOptions] = useState<{ id: string; name: string }[]>([]);
+  const [companyOptions, setCompanyOptions] = useState<{ id: string; name: string }[]>([]);
   const { formatCompact, format } = useCurrency();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -735,14 +803,147 @@ export default function DealsPage() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskDialogPrefill, setTaskDialogPrefill] = useState<any>(null);
 
+  // Pipeline switcher + manager
+  const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
+  const [isPipelineMenuOpen, setIsPipelineMenuOpen] = useState(false);
+  const [isPipelineManagerOpen, setIsPipelineManagerOpen] = useState(false);
+
+  // When pipeline changes, drop any stage filters from the old pipeline
+  useEffect(() => {
+    setFilterStageIds(new Set());
+  }, [currentPipelineId]);
+
+  // Drag-and-drop deals between stages
+  const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDealDragStart = (event: DragStartEvent) => {
+    setActiveDealId(event.active.id as string);
+  };
+
+  const handleDealDragEnd = async (event: DragEndEvent) => {
+    setActiveDealId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const dealId = active.id as string;
+    const newStageId = over.id as string;
+    const target = stages.find((s: any) => s.id === newStageId);
+    if (!target) return;
+    const dragged = deals.find((d) => d.id === dealId);
+    if (!dragged || dragged.stageId === newStageId) return;
+
+    const prev = deals;
+    setDeals((curr) =>
+      curr.map((d) =>
+        d.id === dealId
+          ? {
+              ...d,
+              stageId: newStageId,
+              stage: { id: target.id, name: target.name, color: target.color },
+            }
+          : d
+      )
+    );
+    try {
+      await dealsApi.move(dealId, newStageId);
+    } catch (e: any) {
+      setDeals(prev);
+      toast.error(e?.response?.data?.message || "Не удалось переместить сделку");
+    }
+  };
+
+  const activeDragDeal = activeDealId
+    ? deals.find((d) => d.id === activeDealId) || null
+    : null;
+
+  // Advanced filters drawer state
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filterStageIds, setFilterStageIds] = useState<Set<string>>(new Set());
+  const [filterTemperatures, setFilterTemperatures] = useState<Set<DealTemperature>>(new Set());
+  const [filterMinAmount, setFilterMinAmount] = useState<string>("");
+  const [filterMaxAmount, setFilterMaxAmount] = useState<string>("");
+  const [filterDateFrom, setFilterDateFrom] = useState<string>("");
+  const [filterDateTo, setFilterDateTo] = useState<string>("");
+  const [filterOnlyOverdue, setFilterOnlyOverdue] = useState(false);
+
+  useEffect(() => {
+    if (!isFiltersOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFiltersOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isFiltersOpen]);
+
+  const activeFilterCount =
+    (filterStageIds.size > 0 ? 1 : 0) +
+    (filterTemperatures.size > 0 ? 1 : 0) +
+    (filterMinAmount || filterMaxAmount ? 1 : 0) +
+    (filterDateFrom || filterDateTo ? 1 : 0) +
+    (filterOnlyOverdue ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const resetFilters = () => {
+    setFilterStageIds(new Set());
+    setFilterTemperatures(new Set());
+    setFilterMinAmount("");
+    setFilterMaxAmount("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setFilterOnlyOverdue(false);
+  };
+
+  const pluralDeal = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "сделку";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "сделки";
+    return "сделок";
+  };
+
+  const pluralStages = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "стадия";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "стадии";
+    return "стадий";
+  };
+
+  const pluralPipelines = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "воронка";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "воронки";
+    return "воронок";
+  };
+
+  const refreshPipelines = async () => {
+    try {
+      const res = await pipelinesApi.getAll();
+      const data = Array.isArray(res.data) ? res.data : [res.data];
+      setPipelines(data);
+      setCurrentPipelineId((prev) => {
+        if (prev && data.some((p: any) => p.id === prev)) return prev;
+        const def = data.find((p: any) => p.isDefault);
+        return def?.id || data[0]?.id || null;
+      });
+    } catch (e) {
+      console.error("Failed to refresh pipelines:", e);
+    }
+  };
+
   // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dealsRes, pipelinesRes, contactsRes] = await Promise.all([
+        const [dealsRes, pipelinesRes, contactsRes, companiesRes] = await Promise.all([
           dealsApi.getAll(),
           pipelinesApi.getAll(),
           contactsApi.getAll(),
+          companiesApi.getAll(),
         ]);
 
         const dealsData = dealsRes.data?.items || dealsRes.data?.data || dealsRes.data || [];
@@ -750,12 +951,22 @@ export default function DealsPage() {
 
         const pipelinesData = Array.isArray(pipelinesRes.data) ? pipelinesRes.data : [pipelinesRes.data];
         setPipelines(pipelinesData);
+        const def = pipelinesData.find((p: any) => p?.isDefault);
+        setCurrentPipelineId(def?.id || pipelinesData[0]?.id || null);
 
         const contactsData = contactsRes.data?.items || contactsRes.data?.data || contactsRes.data || [];
         setContactOptions(
           (Array.isArray(contactsData) ? contactsData : []).map((c: any) => ({
             id: c.id,
             name: `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email || c.phone || "—",
+          }))
+        );
+
+        const companiesData = companiesRes.data?.items || companiesRes.data?.data || companiesRes.data || [];
+        setCompanyOptions(
+          (Array.isArray(companiesData) ? companiesData : []).map((c: any) => ({
+            id: c.id,
+            name: c.name || "—",
           }))
         );
       } catch (error) {
@@ -765,26 +976,50 @@ export default function DealsPage() {
     fetchData();
   }, []);
 
-  const currentPipeline = pipelines[0];
+  const currentPipeline = pipelines.find((p) => p.id === currentPipelineId) || pipelines[0];
   const stages = currentPipeline?.stages?.sort((a: any, b: any) => a.order - b.order) || [];
 
   // Memoized filtered deals
   const filteredDeals = useMemo(() => {
+    const min = filterMinAmount === "" ? null : Number(filterMinAmount);
+    const max = filterMaxAmount === "" ? null : Number(filterMaxAmount);
+    const pipelineStageIds = new Set<string>(stages.map((s: any) => s.id));
     return deals.filter(deal => {
+      if (pipelineStageIds.size > 0 && !pipelineStageIds.has(deal.stageId)) return false;
       if (selectedStage && deal.stageId !== selectedStage) return false;
       if (searchQuery && !deal.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
 
       // Quick filters
-      if (quickFilter === "hot" && deal.temperature !== "hot") {
+      if (quickFilter === "hot" && deal.temperature !== "HOT") {
         return false;
       }
       if (quickFilter === "overdue" && !deal.hasOverdueTasks) {
         return false;
       }
+      if (quickFilter === "no-tasks" && (deal.openTasksCount || 0) > 0) {
+        return false;
+      }
+
+      // Advanced filters
+      if (filterStageIds.size > 0 && !filterStageIds.has(deal.stageId)) return false;
+      if (filterTemperatures.size > 0 && (!deal.temperature || !filterTemperatures.has(deal.temperature))) return false;
+      const amount = Number(deal.amount) || 0;
+      if (min !== null && !Number.isNaN(min) && amount < min) return false;
+      if (max !== null && !Number.isNaN(max) && amount > max) return false;
+      if (filterDateFrom) {
+        const from = new Date(filterDateFrom);
+        if (new Date(deal.createdAt) < from) return false;
+      }
+      if (filterDateTo) {
+        const to = new Date(filterDateTo);
+        to.setHours(23, 59, 59, 999);
+        if (new Date(deal.createdAt) > to) return false;
+      }
+      if (filterOnlyOverdue && !deal.hasOverdueTasks) return false;
 
       return true;
     });
-  }, [deals, selectedStage, searchQuery, quickFilter]);
+  }, [deals, stages, selectedStage, searchQuery, quickFilter, filterStageIds, filterTemperatures, filterMinAmount, filterMaxAmount, filterDateFrom, filterDateTo, filterOnlyOverdue]);
 
   const getDealsForStage = (stageId: string) => {
     return filteredDeals.filter(deal => deal.stageId === stageId);
@@ -936,67 +1171,177 @@ export default function DealsPage() {
       <div className="max-w-[1800px] mx-auto p-4 md:p-6 space-y-6">
 
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-[28px] md:text-[34px] font-bold text-white tracking-tight">
-              Сделки
-            </h1>
-            <p className="text-gray-400 mt-1">Управление воронкой продаж</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Сделки</h1>
+
+              {/* Pipeline switcher */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsPipelineMenuOpen((v) => !v)}
+                  onBlur={() => setTimeout(() => setIsPipelineMenuOpen(false), 150)}
+                  className={cn(
+                    "group flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-sm text-white max-w-[260px] transition-colors",
+                    isPipelineMenuOpen && "bg-white/10 border-violet-500/40"
+                  )}
+                  aria-expanded={isPipelineMenuOpen}
+                >
+                  <div
+                    className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow shadow-violet-500/30"
+                  >
+                    <Briefcase className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="truncate font-medium">{currentPipeline?.name || "Без воронки"}</span>
+                  {currentPipeline?.isDefault && (
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" />
+                  )}
+                  <ChevronDown className={cn("w-4 h-4 text-gray-400 flex-shrink-0 transition-transform", isPipelineMenuOpen && "rotate-180 text-violet-400")} />
+                </button>
+
+                {isPipelineMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-[340px] bg-[#0d0d18] border border-white/10 rounded-2xl shadow-2xl shadow-black/60 z-50 overflow-hidden">
+                    {/* Subtle gradient accent */}
+                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-violet-500/10 to-transparent pointer-events-none" />
+
+                    {/* Header */}
+                    <div className="relative flex items-center justify-between px-4 pt-4 pb-3 border-b border-white/5">
+                      <div>
+                        <h3 className="text-sm font-bold text-white">Воронки продаж</h3>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          {pipelines.length} {pluralPipelines(pipelines.length)}
+                        </p>
+                      </div>
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setIsPipelineMenuOpen(false);
+                          setIsPipelineManagerOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg bg-violet-500/15 text-violet-400 hover:bg-violet-500/25"
+                        title="Создать воронку"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Pipelines list */}
+                    <div className="max-h-[360px] overflow-y-auto p-2 scrollbar-minimal">
+                      {pipelines.map((p) => {
+                        const active = p.id === currentPipelineId;
+                        const sortedStages = [...(p.stages || [])].sort((a: any, b: any) => a.order - b.order);
+                        return (
+                          <button
+                            key={p.id}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setCurrentPipelineId(p.id);
+                              setIsPipelineMenuOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-stretch gap-3 px-3 py-2.5 rounded-xl text-left transition-colors",
+                              active
+                                ? "bg-violet-500/15 ring-1 ring-violet-500/30"
+                                : "hover:bg-white/5"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-1 rounded-full flex-shrink-0",
+                              active ? "bg-violet-500" : "bg-transparent"
+                            )} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-sm font-semibold truncate",
+                                  active ? "text-white" : "text-gray-200"
+                                )}>
+                                  {p.name}
+                                </span>
+                                {p.isDefault && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 text-[10px] font-bold uppercase tracking-wide flex-shrink-0">
+                                    <Star className="w-2.5 h-2.5 fill-amber-400" />
+                                    По умолчанию
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-gray-500 mt-0.5">
+                                {sortedStages.length} {pluralStages(sortedStages.length)}
+                              </div>
+                              {sortedStages.length > 0 && (
+                                <div className="flex items-center gap-1 mt-2">
+                                  {sortedStages.slice(0, 8).map((s: any) => (
+                                    <span
+                                      key={s.id}
+                                      className="h-1.5 flex-1 rounded-full"
+                                      style={{ backgroundColor: s.color, opacity: active ? 0.95 : 0.6 }}
+                                      title={s.name}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="w-5 flex items-center justify-center flex-shrink-0">
+                              {active && <Check className="w-4 h-4 text-violet-400" strokeWidth={3} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {pipelines.length === 0 && (
+                        <div className="px-3 py-8 text-center">
+                          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
+                            <Briefcase className="w-5 h-5 text-gray-500" />
+                          </div>
+                          <p className="text-sm text-gray-400">Воронок пока нет</p>
+                          <p className="text-xs text-gray-600 mt-1">Создайте первую через «+»</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="border-t border-white/5 p-2 bg-black/20">
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setIsPipelineMenuOpen(false);
+                          setIsPipelineManagerOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm text-gray-300 hover:bg-white/5 hover:text-white group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4 text-violet-400" />
+                          <span className="font-medium">Управление воронками</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Pills - hidden on mobile */}
+            <div className="hidden lg:flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
+                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm font-bold text-white">{deals.length}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
+                <span className="text-sm text-green-300">Сумма</span>
+                <span className="text-sm font-bold text-green-300">{formatCompact(totalAmount)}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-lg">
+                <span className="text-sm text-purple-300">Средний чек</span>
+                <span className="text-sm font-bold text-purple-300">{formatCompact(avgDealSize)}</span>
+              </div>
+            </div>
           </div>
           <button
             onClick={() => handleOpenCreateModal()}
-            className="flex items-center gap-2 px-5 py-3 bg-violet-500 text-white rounded-2xl font-medium hover:bg-violet-600 shadow-lg shadow-violet-500/25"
+            className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-violet-600 shadow-sm"
           >
             <Plus className="w-5 h-5" />
             <span className="hidden sm:inline">Новая сделка</span>
           </button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-violet-500/20 flex items-center justify-center">
-                <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-violet-400" />
-              </div>
-              <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-white">{deals.length}</p>
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">Всего сделок</p>
-          </div>
-
-          <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-green-500/20 flex items-center justify-center">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
-              </div>
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-white">{formatCompact(totalAmount)}</p>
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">Общая сумма</p>
-          </div>
-
-          <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-purple-500/20 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-              </div>
-            </div>
-            <p className="text-xl sm:text-3xl font-bold text-white">{formatCompact(avgDealSize)}</p>
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">Средний чек</p>
-          </div>
-
-          <div className="glass-card rounded-2xl sm:rounded-3xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-orange-500/20 flex items-center justify-center">
-                <Target className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
-              </div>
-              <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-green-500/20 text-green-400 text-[10px] sm:text-xs font-medium rounded-full">
-                +12%
-              </span>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-white">{stages.length}</p>
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">Этапов воронки</p>
-          </div>
         </div>
 
         {/* Quick Filters */}
@@ -1037,9 +1382,20 @@ export default function DealsPage() {
             />
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-3 glass-card rounded-2xl hover:bg-white/5">
+          <button
+            onClick={() => setIsFiltersOpen(true)}
+            className={cn(
+              "relative flex items-center gap-2 px-4 py-3 glass-card rounded-2xl hover:bg-white/5",
+              hasActiveFilters && "ring-1 ring-violet-500/50"
+            )}
+          >
             <SlidersHorizontal className="w-5 h-5 text-gray-400" />
             <span className="hidden sm:inline text-gray-300 font-medium">Фильтры</span>
+            {activeFilterCount > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-violet-500 text-white text-xs font-bold flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
 
           {/* View Mode Toggle */}
@@ -1073,18 +1429,55 @@ export default function DealsPage() {
 
         {/* Kanban View */}
         {viewMode === "kanban" ? (
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-minimal snap-x snap-mandatory">
-            {stages.map((stage: { id: string; name: string; color: string; order: number }) => (
-              <KanbanColumn
-                key={stage.id}
-                stage={stage}
-                deals={getDealsForStage(stage.id)}
-                onDealClick={(deal) => setSelectedDeal(deal)}
-                onQuickAction={handleQuickAction}
-                onAddDeal={handleAddDeal}
-              />
-            ))}
-          </div>
+          stages.length === 0 ? (
+            <div className="glass-card rounded-2xl sm:rounded-3xl p-10 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto mb-4">
+                <Settings className="w-7 h-7 text-violet-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-1">В этой воронке пока нет стадий</h3>
+              <p className="text-sm text-gray-400 mb-5 max-w-md mx-auto">
+                Добавьте стадии, чтобы начать вести сделки. Каждая стадия — отдельная колонка канбана.
+              </p>
+              <button
+                onClick={() => setIsPipelineManagerOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-xl text-sm font-semibold"
+              >
+                <Plus className="w-4 h-4" />
+                Настроить стадии
+              </button>
+            </div>
+          ) : (
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDealDragStart}
+              onDragEnd={handleDealDragEnd}
+            >
+              <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 scrollbar-minimal snap-x snap-mandatory">
+                {stages.map((stage: { id: string; name: string; color: string; order: number }) => (
+                  <KanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    deals={getDealsForStage(stage.id)}
+                    onDealClick={(deal) => setSelectedDeal(deal)}
+                    onQuickAction={handleQuickAction}
+                    onAddDeal={handleAddDeal}
+                  />
+                ))}
+              </div>
+              <DragOverlay dropAnimation={null}>
+                {activeDragDeal && (
+                  <div className="rotate-2 scale-105 shadow-2xl shadow-violet-500/40 cursor-grabbing w-[280px] sm:w-[320px] md:w-[340px]">
+                    <DealCard
+                      deal={activeDragDeal}
+                      onClick={() => {}}
+                      onQuickAction={() => {}}
+                    />
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
+          )
         ) : (
           /* List View */
           <div className="glass-card rounded-2xl sm:rounded-3xl overflow-hidden">
@@ -1121,7 +1514,7 @@ export default function DealsPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <TemperatureIndicator temperature={["hot", "warm", "cold"][Math.floor(Math.random() * 3)] as any} />
+                          <TemperatureIndicator temperature={deal.temperature} />
                           <p className="font-semibold text-white">{deal.title}</p>
                         </div>
                       </td>
@@ -1192,10 +1585,11 @@ export default function DealsPage() {
         onSave={handleSaveDeal}
         deal={editingDeal ? {
           ...editingDeal,
-          company: editingDeal.company?.name || "",
-          contact: editingDeal.contact ? `${editingDeal.contact.firstName} ${editingDeal.contact.lastName}` : "",
-        } : undefined}
-        stages={stages.map((s: any) => ({ id: s.id, title: s.name }))}
+          stageId: editingDeal.stageId || defaultStageId || stages[0]?.id,
+        } : defaultStageId ? { stageId: defaultStageId } : undefined}
+        stages={stages.map((s: any) => ({ id: s.id, title: s.name, color: s.color }))}
+        contacts={contactOptions}
+        companies={companyOptions}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -1224,6 +1618,278 @@ export default function DealsPage() {
         prefillDealId={taskDialogPrefill?.dealId}
         prefillContactId={taskDialogPrefill?.contactId}
       />
+
+      {/* Pipeline manager */}
+      <PipelineManagerModal
+        isOpen={isPipelineManagerOpen}
+        onClose={() => setIsPipelineManagerOpen(false)}
+        pipelines={pipelines}
+        initialPipelineId={currentPipelineId}
+        onChanged={refreshPipelines}
+      />
+
+      {/* Filters drawer */}
+      {isFiltersOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[60]"
+            onClick={() => setIsFiltersOpen(false)}
+          />
+          <div className="fixed top-0 right-0 h-full w-full sm:w-[440px] z-[70] flex flex-col shadow-2xl border-l border-white/10 bg-[#0d0d18]">
+            {/* gradient accent at top */}
+            <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-violet-500/10 to-transparent pointer-events-none" />
+
+            {/* Header */}
+            <div className="relative flex items-center justify-between px-5 py-4 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                  <SlidersHorizontal className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white leading-tight">Фильтры</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {activeFilterCount > 0 ? `${activeFilterCount} активных` : "Не выбраны"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsFiltersOpen(false)}
+                className="p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white"
+                aria-label="Закрыть фильтры"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="relative flex-1 overflow-y-auto p-5 space-y-4 scrollbar-minimal">
+              {/* Stages section */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Стадия</h3>
+                  {filterStageIds.size > 0 && (
+                    <button
+                      onClick={() => setFilterStageIds(new Set())}
+                      className="text-[11px] text-violet-400 hover:text-violet-300 font-semibold"
+                    >
+                      Очистить
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {stages.map((s: any) => {
+                    const checked = filterStageIds.has(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(filterStageIds);
+                          if (checked) next.delete(s.id);
+                          else next.add(s.id);
+                          setFilterStageIds(next);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left",
+                          checked
+                            ? "bg-violet-500/10 border-violet-500/40"
+                            : "bg-transparent border-transparent hover:bg-white/5"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0",
+                            checked ? "bg-violet-500 border-violet-500" : "border-white/20"
+                          )}
+                        >
+                          {checked && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                        </div>
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: s.color }}
+                        />
+                        <span className={cn("text-sm flex-1 truncate", checked ? "text-white" : "text-gray-300")}>
+                          {s.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {stages.length === 0 && (
+                    <p className="text-sm text-gray-500 px-3 py-2">Нет стадий в воронке</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Temperature section */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Температура</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "HOT" as DealTemperature, label: "Горячие", icon: Flame, color: "text-red-400 bg-red-500/15 border-red-500/40 shadow-red-500/20" },
+                    { id: "WARM" as DealTemperature, label: "Тёплые", icon: Thermometer, color: "text-amber-400 bg-amber-500/15 border-amber-500/40 shadow-amber-500/20" },
+                    { id: "COLD" as DealTemperature, label: "Холодные", icon: Snowflake, color: "text-blue-400 bg-blue-500/15 border-blue-500/40 shadow-blue-500/20" },
+                  ].map((t) => {
+                    const active = filterTemperatures.has(t.id);
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(filterTemperatures);
+                          if (active) next.delete(t.id);
+                          else next.add(t.id);
+                          setFilterTemperatures(next);
+                        }}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-xs font-semibold border",
+                          active
+                            ? `${t.color} shadow-lg`
+                            : "text-gray-400 bg-white/[0.02] border-white/10 hover:bg-white/5 hover:text-gray-300"
+                        )}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Amount section */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Сумма сделки</h3>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">От</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={filterMinAmount}
+                      onChange={(e) => setFilterMinAmount(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none"
+                    />
+                  </div>
+                  <span className="text-gray-600">—</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">До</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="∞"
+                      value={filterMaxAmount}
+                      onChange={(e) => setFilterMaxAmount(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Date section */}
+              <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Дата создания</h3>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none [color-scheme:dark]"
+                  />
+                  <span className="text-gray-600">—</span>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none [color-scheme:dark]"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {[
+                    { label: "Сегодня", days: 0 },
+                    { label: "7 дней", days: 7 },
+                    { label: "30 дней", days: 30 },
+                    { label: "90 дней", days: 90 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        const to = new Date();
+                        const from = new Date();
+                        from.setDate(from.getDate() - preset.days);
+                        const fmt = (d: Date) => d.toISOString().slice(0, 10);
+                        setFilterDateFrom(fmt(from));
+                        setFilterDateTo(fmt(to));
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-300"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggle: only overdue */}
+              <button
+                type="button"
+                onClick={() => setFilterOnlyOverdue((v) => !v)}
+                className={cn(
+                  "w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left",
+                  filterOnlyOverdue
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-white/[0.03] border-white/5 hover:bg-white/[0.06]"
+                )}
+                role="switch"
+                aria-checked={filterOnlyOverdue}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                    filterOnlyOverdue ? "bg-red-500/30" : "bg-red-500/15"
+                  )}>
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white">Только просроченные</div>
+                    <div className="text-xs text-gray-500 truncate">С активными просроченными задачами</div>
+                  </div>
+                </div>
+                <div
+                  className={cn(
+                    "w-11 h-6 rounded-full p-0.5 flex items-center transition-colors flex-shrink-0",
+                    filterOnlyOverdue ? "bg-violet-500" : "bg-white/10"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full bg-white shadow-md transition-transform",
+                      filterOnlyOverdue ? "translate-x-5" : "translate-x-0"
+                    )}
+                  />
+                </div>
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="relative px-5 py-4 border-t border-white/5 bg-[#0a0a14] flex items-center gap-3">
+              <button
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+                className="px-4 py-3 rounded-xl border border-white/10 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+              >
+                Сбросить
+              </button>
+              <button
+                onClick={() => setIsFiltersOpen(false)}
+                className="flex-1 px-5 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-violet-500/30"
+              >
+                Показать {filteredDeals.length} {pluralDeal(filteredDeals.length)}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

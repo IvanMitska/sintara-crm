@@ -37,6 +37,7 @@ export class DealsService {
         stageId: createDealDto.stageId || defaultPipeline.stages[0].id,
         ownerId: userId,
         createdById: userId,
+        lastActivityAt: new Date(),
         products: products ? {
           create: products.map(p => ({
             productId: p.productId,
@@ -142,6 +143,11 @@ export class DealsService {
               avatar: true,
             },
           },
+          tasks: {
+            where: { status: { not: 'COMPLETED' } },
+            select: { id: true, title: true, dueDate: true, status: true },
+            orderBy: { dueDate: 'asc' },
+          },
           _count: {
             select: {
               products: true,
@@ -153,8 +159,36 @@ export class DealsService {
       this.prisma.deal.count({ where }),
     ]);
 
+    const now = new Date();
+    const enriched = deals.map((deal) => {
+      const tasks = deal.tasks || [];
+      const overdueTasks = tasks.filter(
+        (t) => t.dueDate && new Date(t.dueDate) < now
+      );
+      const upcomingTask = tasks.find(
+        (t) => t.dueDate && new Date(t.dueDate) >= now
+      );
+      const nextTask = upcomingTask || overdueTasks[0] || null;
+      // Strip raw tasks list from the card payload — we only expose derived state
+      const { tasks: _omit, ...rest } = deal;
+      return {
+        ...rest,
+        hasOverdueTasks: overdueTasks.length > 0,
+        overdueTasksCount: overdueTasks.length,
+        openTasksCount: tasks.length,
+        nextTask: nextTask
+          ? {
+              id: nextTask.id,
+              title: nextTask.title,
+              dueDate: nextTask.dueDate,
+              isOverdue: !!(nextTask.dueDate && new Date(nextTask.dueDate) < now),
+            }
+          : null,
+      };
+    });
+
     return {
-      data: deals,
+      data: enriched,
       total,
       skip,
       take,
@@ -240,6 +274,7 @@ export class DealsService {
       where: { id },
       data: {
         ...dealData,
+        lastActivityAt: new Date(),
         products: products ? {
           deleteMany: {},
           create: products.map(p => ({
@@ -303,6 +338,7 @@ export class DealsService {
         stageId: moveDealDto.stageId,
         // Обновляем статус в зависимости от этапа
         status: this.getStatusByStageOrder(newStage.order, newStage.pipeline.stages.length),
+        lastActivityAt: new Date(),
       },
       include: {
         stage: {

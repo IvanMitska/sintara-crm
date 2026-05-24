@@ -142,6 +142,13 @@ export const pipelinesApi = {
   create: (data: any) => api.post('/pipelines', data),
   update: (id: string, data: any) => api.patch(`/pipelines/${id}`, data),
   delete: (id: string) => api.delete(`/pipelines/${id}`),
+  createStage: (pipelineId: string, data: { name: string; color?: string; order?: number }) =>
+    api.post(`/pipelines/${pipelineId}/stages`, data),
+  updateStage: (stageId: string, data: { name?: string; color?: string; order?: number }) =>
+    api.patch(`/pipelines/stages/${stageId}`, data),
+  deleteStage: (stageId: string) => api.delete(`/pipelines/stages/${stageId}`),
+  reorderStages: (pipelineId: string, stageIds: string[]) =>
+    api.post(`/pipelines/${pipelineId}/stages/reorder`, { stageIds }),
 };
 
 // Leads API
@@ -580,6 +587,16 @@ export const automationApi = {
   }>) => api.patch(`/automation/${id}`, data),
   execute: (id: string) => api.post(`/automation/${id}/execute`),
   delete: (id: string) => api.delete(`/automation/${id}`),
+};
+
+// Notifications API
+export const notificationsApi = {
+  getAll: () => api.get('/notifications'),
+  getUnread: () => api.get('/notifications/unread'),
+  getUnreadCount: () => api.get('/notifications/unread/count'),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
 };
 
 // Integrations API (общий для всех интеграций)

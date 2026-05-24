@@ -115,7 +115,34 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
     });
   };
 
-  if (!isOpen) return null;
+  // Mount/visible separation for smooth slide-in / slide-out
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      // next frame so the transition actually runs
+      const r = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(r);
+    } else if (mounted) {
+      setVisible(false);
+      const t = setTimeout(() => setMounted(false), 320);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
+  // lock body scroll while open
+  useEffect(() => {
+    if (!mounted) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   const isEdit = !!lead?.id;
 
@@ -123,15 +150,22 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 z-[60]"
         onClick={onClose}
+        className={cn(
+          "fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] transition-opacity duration-300",
+          visible ? "opacity-100" : "opacity-0"
+        )}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div className="bg-[#0d0d14] rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-hidden border border-white/10">
+      {/* Side panel */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 bottom-0 z-[70] w-full sm:w-[560px] md:w-[620px] max-w-[calc(100vw-64px)] flex flex-col bg-[#0d0d14] border-l border-white/10 shadow-[-20px_0_60px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out will-change-transform",
+          visible ? "translate-x-0" : "translate-x-full"
+        )}
+      >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
             <h2 className="text-xl font-bold text-white">
               {isEdit ? "Редактировать лид" : "Новый лид"}
             </h2>
@@ -144,7 +178,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
@@ -302,7 +336,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-white/5">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-white/5 shrink-0">
             <button
               type="button"
               onClick={onClose}
@@ -319,7 +353,6 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
               {isEdit ? "Сохранить" : "Создать"}
             </button>
           </div>
-        </div>
       </div>
     </>
   );

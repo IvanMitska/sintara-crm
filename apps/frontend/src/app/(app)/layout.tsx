@@ -34,6 +34,7 @@ import {
 import OnboardingTour, {
   useOnboardingTour,
 } from "@/components/onboarding/OnboardingTour";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 type NavItem = {
   name: string;
@@ -520,12 +521,7 @@ export default function AppLayout({
               <button className="p-2.5 rounded-xl hover:bg-white/10 lg:hidden">
                 <Search size={20} className="text-gray-400" />
               </button>
-              <button className="relative p-2.5 rounded-xl hover:bg-white/10">
-                <Bell size={20} className="text-gray-400" />
-                {navCounts.unreadMessages > 0 && (
-                  <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-cyan-500 border-2 border-[#0d0d14]" />
-                )}
-              </button>
+              <NotificationBell />
               <div className="hidden lg:flex items-center gap-3 pl-3 ml-1 border-l border-white/10">
                 <div className="text-right">
                   <p className="text-sm font-semibold text-white">

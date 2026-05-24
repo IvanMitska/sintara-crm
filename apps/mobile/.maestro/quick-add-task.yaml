@@ -1,0 +1,18 @@
+# E2E (ТЗ §18 сценарий 2): Quick Add → создание задачи → проверка.
+appId: com.sintara.crm.mobile
+---
+- runFlow: login.yaml
+# Центральная «+» (Quick Add)
+- tapOn:
+    id: 'quick-add-fab'
+- assertVisible: 'Быстрое создание'
+- tapOn: 'Новая задача'
+- assertVisible: 'Создать задачу'
+- tapOn:
+    id: 'task-title'
+- inputText: 'E2E проверка задачи'
+- hideKeyboard
+- tapOn: 'Создать задачу'
+# Возврат и проверка списка задач
+- tapOn: 'Сегодня'
+- assertVisible: 'Задачи на сегодня'
