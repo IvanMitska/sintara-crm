@@ -9,6 +9,7 @@ import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CurrentOrg } from '../auth/decorators/current-org.decorator';
 
 @ApiTags('Analytics')
 @ApiBearerAuth()
@@ -19,8 +20,8 @@ export class AnalyticsController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Получить статистику для дашборда' })
-  getDashboardStats(@CurrentUser() user: any) {
-    return this.analyticsService.getDashboardStats(user.id);
+  getDashboardStats(@CurrentUser() user: any, @CurrentOrg() organizationId: string) {
+    return this.analyticsService.getDashboardStats(user.id, organizationId);
   }
 
   @Get('today-tasks')
@@ -32,30 +33,44 @@ export class AnalyticsController {
   @Get('sales')
   @ApiOperation({ summary: 'Получить аналитику продаж' })
   getSalesAnalytics(
+    @CurrentOrg() organizationId: string,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
     return this.analyticsService.getSalesAnalytics(
       new Date(startDate),
       new Date(endDate),
+      organizationId,
     );
   }
 
   @Get('activity')
   @ApiOperation({ summary: 'Получить аналитику активности' })
   getActivityAnalytics(
-    @CurrentUser() user: any,
+    @CurrentOrg() organizationId: string,
     @Query('days') days?: string,
   ) {
     return this.analyticsService.getActivityAnalytics(
-      user.id,
+      organizationId,
       days ? parseInt(days) : 30,
     );
   }
 
   @Get('funnel')
   @ApiOperation({ summary: 'Получить воронку конверсии' })
-  getConversionFunnel() {
-    return this.analyticsService.getConversionFunnel();
+  getConversionFunnel(@CurrentOrg() organizationId: string) {
+    return this.analyticsService.getConversionFunnel(organizationId);
+  }
+
+  @Get('lead-sources')
+  @ApiOperation({ summary: 'Получить распределение лидов по источникам' })
+  getLeadSources(@CurrentOrg() organizationId: string) {
+    return this.analyticsService.getLeadSources(organizationId);
+  }
+
+  @Get('managers')
+  @ApiOperation({ summary: 'Получить статистику по менеджерам' })
+  getManagerStats(@CurrentOrg() organizationId: string) {
+    return this.analyticsService.getManagerStats(organizationId);
   }
 }

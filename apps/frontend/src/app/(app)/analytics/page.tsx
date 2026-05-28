@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
           const funnelFromDeals = stages.map((stage: any, index: number) => {
             const stageDeals = deals.filter((d: any) => d.stageId === stage.id);
             const count = stageDeals.length;
-            const value = stageDeals.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+            const value = stageDeals.reduce((sum: number, d: any) => sum + Number(d.amount || 0), 0);
             return {
               stage: stage.name,
               count,

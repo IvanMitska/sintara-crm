@@ -5,7 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AnalyticsService {
   constructor(private prisma: PrismaService) {}
 
-  async getDashboardStats(userId?: string) {
+  async getDashboardStats(userId?: string, organizationId?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -13,6 +13,8 @@ export class AnalyticsService {
 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const orgFilter = organizationId ? { organizationId } : {};
 
     const [
       totalContacts,
@@ -27,6 +29,9 @@ export class AnalyticsService {
       recentContacts,
       recentActivities,
       funnel,
+      wonDealsData,
+      lostDealsCount,
+      newClients,
     ] = await Promise.all([
       this.prisma.contact.count(userId ? { where: { ownerId: userId } } : undefined),
       this.prisma.deal.count(userId ? { where: { ownerId: userId } } : undefined),
@@ -82,10 +87,23 @@ export class AnalyticsService {
           user: { select: { firstName: true, lastName: true } },
         },
       }),
-      this.getConversionFunnel(),
+      this.getConversionFunnel(organizationId),
+      // Won deals (organization-wide) for revenue / average / conversion KPIs
+      this.prisma.deal.findMany({
+        where: { ...orgFilter, status: 'SUCCESS' },
+        select: { amount: true },
+      }),
+      this.prisma.deal.count({ where: { ...orgFilter, status: 'LOST' } }),
+      this.prisma.contact.count({ where: { ...orgFilter, createdAt: { gte: weekAgo } } }),
     ]);
 
     const totalDealsAmount = activeDealsData.reduce((sum, deal) => sum + Number(deal.amount), 0);
+
+    const wonCount = wonDealsData.length;
+    const totalRevenue = wonDealsData.reduce((sum, deal) => sum + Number(deal.amount), 0);
+    const avgDealSize = wonCount > 0 ? Math.round(totalRevenue / wonCount) : 0;
+    const closedCount = wonCount + lostDealsCount;
+    const conversionRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 1000) / 10 : 0;
 
     // Calculate deals added today
     const dealsAddedToday = await this.prisma.deal.count({
@@ -112,6 +130,13 @@ export class AnalyticsService {
       dealsAddedToday,
       recentActivities,
       funnel,
+      // KPIs consumed by the analytics page
+      totalRevenue,
+      conversionRate,
+      avgDealSize,
+      newClients,
+      wonDeals: wonCount,
+      lostDeals: lostDealsCount,
     };
   }
 
@@ -139,71 +164,98 @@ export class AnalyticsService {
     });
   }
 
-  async getSalesAnalytics(startDate: Date, endDate: Date) {
+  // Returns a day-by-day time series for the sales-dynamics chart.
+  async getSalesAnalytics(startDate: Date, endDate: Date, organizationId?: string) {
     const deals = await this.prisma.deal.findMany({
       where: {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        ...(organizationId ? { organizationId } : {}),
+        createdAt: { gte: startDate, lte: endDate },
       },
-      include: {
-        stage: true,
-      },
+      select: { amount: true, createdAt: true },
     });
 
-    const totalAmount = deals.reduce((sum, deal) => sum + Number(deal.amount), 0);
-    const averageAmount = deals.length > 0 ? totalAmount / deals.length : 0;
-    const dealsByStage = deals.reduce((acc, deal) => {
-      const stageName = deal.stage.name;
-      acc[stageName] = (acc[stageName] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const byDay = new Map<string, { revenue: number; deals: number }>();
+    for (const deal of deals) {
+      const key = deal.createdAt.toISOString().split('T')[0];
+      const bucket = byDay.get(key) || { revenue: 0, deals: 0 };
+      bucket.revenue += Number(deal.amount);
+      bucket.deals += 1;
+      byDay.set(key, bucket);
+    }
 
-    return {
-      totalDeals: deals.length,
-      totalAmount,
-      averageAmount,
-      dealsByStage,
-    };
+    const dayMs = 24 * 60 * 60 * 1000;
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    const totalDays = Math.min(
+      Math.max(Math.ceil((end.getTime() - start.getTime()) / dayMs) + 1, 1),
+      31,
+    );
+
+    const series: { period: string; revenue: number; deals: number }[] = [];
+    for (let i = 0; i < totalDays; i++) {
+      const dt = new Date(start.getTime() + i * dayMs);
+      const key = dt.toISOString().split('T')[0];
+      const bucket = byDay.get(key) || { revenue: 0, deals: 0 };
+      series.push({
+        period: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        revenue: bucket.revenue,
+        deals: bucket.deals,
+      });
+    }
+    return series;
   }
 
-  async getActivityAnalytics(userId?: string, days: number = 30) {
+  // Returns a day-by-day activity series (calls / meetings / emails) for the bar chart.
+  async getActivityAnalytics(organizationId?: string, days: number = 30) {
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - (days - 1));
 
     const activities = await this.prisma.activity.findMany({
       where: {
-        ...(userId ? { userId } : {}),
-        createdAt: {
-          gte: startDate,
-        },
+        ...(organizationId ? { organizationId } : {}),
+        createdAt: { gte: startDate },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      select: { type: true, createdAt: true },
     });
 
-    const activitiesByType = activities.reduce((acc, activity) => {
-      acc[activity.type] = (acc[activity.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const activitiesByDay = activities.reduce((acc, activity) => {
-      const day = activity.createdAt.toISOString().split('T')[0];
-      acc[day] = (acc[day] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      total: activities.length,
-      byType: activitiesByType,
-      byDay: activitiesByDay,
+    const classify = (type: string): 'calls' | 'meetings' | 'emails' => {
+      const t = (type || '').toLowerCase();
+      if (t.includes('task') || t.includes('meeting') || t.includes('booking')) return 'meetings';
+      if (t.includes('contact') || t.includes('message') || t.includes('email') || t.includes('lead'))
+        return 'emails';
+      return 'calls';
     };
+
+    const byDay = new Map<string, { calls: number; meetings: number; emails: number }>();
+    for (const a of activities) {
+      const key = a.createdAt.toISOString().split('T')[0];
+      const bucket = byDay.get(key) || { calls: 0, meetings: 0, emails: 0 };
+      bucket[classify(a.type)] += 1;
+      byDay.set(key, bucket);
+    }
+
+    const dayMs = 24 * 60 * 60 * 1000;
+    const cappedDays = Math.min(days, 14);
+    const series: { day: string; calls: number; meetings: number; emails: number }[] = [];
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    for (let i = cappedDays - 1; i >= 0; i--) {
+      const dt = new Date(base.getTime() - i * dayMs);
+      const key = dt.toISOString().split('T')[0];
+      const bucket = byDay.get(key) || { calls: 0, meetings: 0, emails: 0 };
+      series.push({
+        day: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        ...bucket,
+      });
+    }
+    return series;
   }
 
-  async getConversionFunnel() {
+  async getConversionFunnel(organizationId?: string) {
     const stages = await this.prisma.stage.findMany({
+      where: organizationId ? { pipeline: { organizationId } } : {},
       include: {
         deals: true,
       },
@@ -219,5 +271,67 @@ export class AnalyticsService {
       dealsCount: stage.deals.length,
       totalAmount: stage.deals.reduce((sum, deal) => sum + Number(deal.amount), 0),
     }));
+  }
+
+  // Lead distribution by source for the pie chart.
+  async getLeadSources(organizationId?: string) {
+    const leads = await this.prisma.lead.findMany({
+      where: organizationId ? { organizationId } : {},
+      select: { source: true },
+    });
+
+    const counts = new Map<string, number>();
+    for (const lead of leads) {
+      const source = lead.source || 'OTHER';
+      counts.set(source, (counts.get(source) || 0) + 1);
+    }
+
+    return Array.from(counts.entries()).map(([source, count]) => ({ source, count }));
+  }
+
+  // Per-owner deal statistics for the "top managers" widget.
+  async getManagerStats(organizationId?: string) {
+    const deals = await this.prisma.deal.findMany({
+      where: organizationId ? { organizationId } : {},
+      select: {
+        amount: true,
+        status: true,
+        ownerId: true,
+        owner: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+      },
+    });
+
+    const byOwner = new Map<
+      string,
+      { id: string; firstName: string; lastName: string; avatar: string | null; deals: number; won: number; revenue: number }
+    >();
+
+    for (const deal of deals) {
+      if (!deal.owner) continue;
+      const entry =
+        byOwner.get(deal.ownerId) || {
+          id: deal.owner.id,
+          firstName: deal.owner.firstName,
+          lastName: deal.owner.lastName,
+          avatar: deal.owner.avatar,
+          deals: 0,
+          won: 0,
+          revenue: 0,
+        };
+      entry.deals += 1;
+      if (deal.status === 'SUCCESS') {
+        entry.won += 1;
+        entry.revenue += Number(deal.amount);
+      }
+      byOwner.set(deal.ownerId, entry);
+    }
+
+    return Array.from(byOwner.values())
+      .map(m => ({
+        ...m,
+        name: `${m.firstName} ${m.lastName}`.trim(),
+        conversion: m.deals > 0 ? Math.round((m.won / m.deals) * 100) : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
   }
 }
