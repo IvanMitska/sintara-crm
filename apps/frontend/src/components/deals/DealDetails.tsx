@@ -30,6 +30,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface DealDetailsProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ interface DealDetailsProps {
 
 export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps) {
   const { format } = useCurrency();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("overview");
   const [comment, setComment] = useState("");
 
@@ -52,9 +54,9 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
   };
 
   const priorityLabels: Record<string, string> = {
-    low: "Низкий",
-    medium: "Средний",
-    high: "Высокий",
+    low: t("deals.priorityLow"),
+    medium: t("deals.priorityMedium"),
+    high: t("deals.priorityHigh"),
   };
 
   return (
@@ -72,7 +74,7 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={onEdit} className="border-white/10 text-gray-400 hover:bg-white/5 hover:text-white">
                 <Edit size={16} className="mr-2" />
-                Редактировать
+                {t("common.edit")}
               </Button>
               <Button size="sm" variant="ghost" className="text-gray-400 hover:bg-white/5 hover:text-white">
                 <MoreVertical size={16} />
@@ -88,7 +90,7 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400">Сумма сделки</p>
+                    <p className="text-sm text-gray-400">{t("deals.dealAmount")}</p>
                     <p className="text-2xl font-bold text-white">
                       {format(deal.amount)}
                     </p>
@@ -102,7 +104,7 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400">Приоритет</p>
+                    <p className="text-sm text-gray-400">{t("deals.priority")}</p>
                     <Badge className={`${priorityColors[deal.priority]} mt-1`} variant="secondary">
                       {priorityLabels[deal.priority]}
                     </Badge>
@@ -116,7 +118,7 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
           {/* Contact Info */}
           <Card className="glass-card border-white/10">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-white">Контактная информация</CardTitle>
+              <CardTitle className="text-base text-white">{t("contacts.contactInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
@@ -134,7 +136,7 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
               <div className="flex items-center gap-3">
                 <Calendar size={16} className="text-gray-400" />
                 <span className="text-sm text-white">
-                  Создано: {new Date(deal.createdAt).toLocaleDateString("ru-RU")}
+                  {t("common.createdAt")}: {new Date(deal.createdAt).toLocaleDateString("ru-RU")}
                 </span>
               </div>
             </CardContent>
@@ -154,33 +156,33 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 bg-white/5 border border-white/10">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">Обзор</TabsTrigger>
-              <TabsTrigger value="tasks" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">Задачи</TabsTrigger>
-              <TabsTrigger value="files" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">Файлы</TabsTrigger>
-              <TabsTrigger value="history" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">История</TabsTrigger>
+              <TabsTrigger value="overview" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">{t("deals.tabOverview")}</TabsTrigger>
+              <TabsTrigger value="tasks" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">{t("deals.tabTasks")}</TabsTrigger>
+              <TabsTrigger value="files" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">{t("deals.tabFiles")}</TabsTrigger>
+              <TabsTrigger value="history" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-400 text-gray-400">{t("deals.tabHistory")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
               <Card className="glass-card border-white/10">
                 <CardHeader>
-                  <CardTitle className="text-base text-white">Комментарии</CardTitle>
+                  <CardTitle className="text-base text-white">{t("deals.comments")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex gap-3">
                     <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 flex items-center justify-center text-white text-sm">
-                      АИ
+                      {t("deals.sampleInitials")}
                     </div>
                     <div className="flex-1">
                       <div className="bg-white/5 rounded-lg p-3 border border-white/5">
-                        <p className="text-sm text-white">Клиент заинтересован в нашем предложении. Ждем ответа на КП.</p>
-                        <p className="text-xs text-gray-400 mt-1">2 часа назад</p>
+                        <p className="text-sm text-white">{t("deals.sampleComment")}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t("deals.hoursAgoSample")}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-3">
                     <Textarea
-                      placeholder="Добавить комментарий..."
+                      placeholder={t("deals.addComment")}
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
@@ -198,10 +200,10 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
               <Card className="glass-card border-white/10">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center justify-between text-white">
-                    Задачи
+                    {t("deals.tabTasks")}
                     <Button size="sm" className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600">
                       <Plus size={16} className="mr-1" />
-                      Добавить
+                      {t("common.add")}
                     </Button>
                   </CardTitle>
                 </CardHeader>
@@ -209,15 +211,15 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
                   <div className="flex items-start gap-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                     <CheckSquare size={16} className="text-yellow-500 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-white">Отправить КП</p>
-                      <p className="text-xs text-gray-400">Срок: завтра</p>
+                      <p className="text-sm font-medium text-white">{t("deals.sampleTaskSendProposal")}</p>
+                      <p className="text-xs text-gray-400">{t("deals.sampleDueTomorrow")}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                     <CheckSquare size={16} className="text-green-500 mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium line-through text-gray-400">Первичный контакт</p>
-                      <p className="text-xs text-gray-400">Выполнено вчера</p>
+                      <p className="text-sm font-medium line-through text-gray-400">{t("deals.sampleTaskFirstContact")}</p>
+                      <p className="text-xs text-gray-400">{t("deals.sampleDoneYesterday")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -228,10 +230,10 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
               <Card className="glass-card border-white/10">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center justify-between text-white">
-                    Файлы
+                    {t("deals.tabFiles")}
                     <Button size="sm" className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600">
                       <Paperclip size={16} className="mr-1" />
-                      Загрузить
+                      {t("deals.upload")}
                     </Button>
                   </CardTitle>
                 </CardHeader>
@@ -239,15 +241,15 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
                   <div className="flex items-center gap-3 p-3 border border-white/10 rounded-lg hover:bg-white/5 ">
                     <FileText size={20} className="text-violet-500" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-white">Коммерческое предложение.pdf</p>
-                      <p className="text-xs text-gray-400">2.3 MB - 2 дня назад</p>
+                      <p className="text-sm font-medium text-white">{t("deals.sampleFileProposal")}</p>
+                      <p className="text-xs text-gray-400">2.3 MB - {t("deals.sampleDays2Ago")}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 border border-white/10 rounded-lg hover:bg-white/5 ">
                     <FileText size={20} className="text-violet-500" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-white">Договор_черновик.docx</p>
-                      <p className="text-xs text-gray-400">156 KB - 5 дней назад</p>
+                      <p className="text-sm font-medium text-white">{t("deals.sampleFileContract")}</p>
+                      <p className="text-xs text-gray-400">156 KB - {t("deals.sampleDays5Ago")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -257,28 +259,28 @@ export function DealDetails({ isOpen, onClose, deal, onEdit }: DealDetailsProps)
             <TabsContent value="history" className="space-y-4">
               <Card className="glass-card border-white/10">
                 <CardHeader>
-                  <CardTitle className="text-base text-white">История изменений</CardTitle>
+                  <CardTitle className="text-base text-white">{t("deals.changeHistory")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex gap-3">
                       <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5"></div>
                       <div className="flex-1">
-                        <p className="text-sm text-white">Сделка перемещена в "Переговоры"</p>
-                        <p className="text-xs text-gray-400">Сегодня, 14:30</p>
+                        <p className="text-sm text-white">{t("deals.sampleHistoryMovedNegotiation")}</p>
+                        <p className="text-xs text-gray-400">{t("deals.sampleTodayTime")}</p>
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5"></div>
                       <div className="flex-1">
-                        <p className="text-sm text-white">Добавлен контакт: {deal.contact}</p>
-                        <p className="text-xs text-gray-400">Вчера, 10:15</p>
+                        <p className="text-sm text-white">{t("deals.sampleHistoryContactAdded", { contact: deal.contact })}</p>
+                        <p className="text-xs text-gray-400">{t("deals.sampleYesterdayTime")}</p>
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <div className="w-2 h-2 rounded-full bg-gray-400 mt-1.5"></div>
                       <div className="flex-1">
-                        <p className="text-sm text-white">Сделка создана</p>
+                        <p className="text-sm text-white">{t("deals.historyDealCreated")}</p>
                         <p className="text-xs text-gray-400">
                           {new Date(deal.createdAt).toLocaleDateString("ru-RU")}
                         </p>

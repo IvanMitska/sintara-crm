@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { automationApi } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface AutomationTrigger {
   type: string;
@@ -41,43 +42,46 @@ interface Automation {
   updatedAt: string;
 }
 
-const TRIGGER_LABELS: Record<string, string> = {
-  deal_stage_changed: "Смена этапа сделки",
-  deal_created: "Создана сделка",
-  deal_won: "Сделка выиграна",
-  deal_lost: "Сделка проиграна",
-  contact_created: "Создан контакт",
-  task_created: "Создана задача",
-  task_overdue: "Задача просрочена",
-  lead_created: "Создан лид",
-  lead_status_changed: "Смена статуса лида",
-  lead_converted: "Лид конвертирован",
+// Maps enum value -> translation key (resolved via t() at render)
+const TRIGGER_LABEL_KEYS: Record<string, string> = {
+  deal_stage_changed: "automation.triggerDealStageChanged",
+  deal_created: "automation.triggerDealCreated",
+  deal_won: "automation.triggerDealWon",
+  deal_lost: "automation.triggerDealLost",
+  contact_created: "automation.triggerContactCreated",
+  task_created: "automation.triggerTaskCreated",
+  task_overdue: "automation.triggerTaskOverdue",
+  lead_created: "automation.triggerLeadCreated",
+  lead_status_changed: "automation.triggerLeadStatusChanged",
+  lead_converted: "automation.triggerLeadConverted",
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  create_task: "Создать задачу",
-  send_notification: "Отправить уведомление",
-  update_field: "Обновить поле",
-  assign_owner: "Назначить ответственного",
-  add_tag: "Добавить тег",
+const ACTION_LABEL_KEYS: Record<string, string> = {
+  create_task: "automation.actionCreateTask",
+  send_notification: "automation.actionSendNotification",
+  update_field: "automation.actionUpdateField",
+  assign_owner: "automation.actionAssignOwner",
+  add_tag: "automation.actionAddTag",
 };
 
-const TRIGGER_OPTIONS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
-const ACTION_OPTIONS = Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }));
-
-function formatRelativeTime(dateString?: string | null) {
-  if (!dateString) return "никогда";
-  const diff = Date.now() - new Date(dateString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "только что";
-  if (mins < 60) return `${mins} мин назад`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} ч назад`;
-  const days = Math.floor(hrs / 24);
-  return `${days} д назад`;
-}
+const TRIGGER_VALUES = Object.keys(TRIGGER_LABEL_KEYS);
+const ACTION_VALUES = Object.keys(ACTION_LABEL_KEYS);
 
 export default function AutomationPage() {
+  const { t } = useTranslation();
+
+  const formatRelativeTime = (dateString?: string | null) => {
+    if (!dateString) return t("automation.never");
+    const diff = Date.now() - new Date(dateString).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t("notifications.justNow");
+    if (mins < 60) return t("notifications.minAgo", { count: mins });
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return t("notifications.hourAgo", { count: hrs });
+    const days = Math.floor(hrs / 24);
+    return t("notifications.dayAgo", { count: days });
+  };
+
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,7 +101,7 @@ export default function AutomationPage() {
       const list = Array.isArray(res.data) ? res.data : res.data?.items || [];
       setAutomations(list);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось загрузить автоматизации");
+      toast.error(e.response?.data?.message || t("automation.loadError"));
     } finally {
       setLoading(false);
     }
@@ -107,9 +111,9 @@ export default function AutomationPage() {
     try {
       await automationApi.update(a.id, { isActive: !a.isActive });
       setAutomations((prev) => prev.map((x) => (x.id === a.id ? { ...x, isActive: !a.isActive } : x)));
-      toast.success(!a.isActive ? "Автоматизация включена" : "Автоматизация выключена");
+      toast.success(!a.isActive ? t("automation.enabledToast") : t("automation.disabledToast"));
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось обновить");
+      toast.error(e.response?.data?.message || t("automation.updateError"));
     }
   };
 
@@ -117,10 +121,10 @@ export default function AutomationPage() {
     setRunningId(a.id);
     try {
       await automationApi.execute(a.id);
-      toast.success("Автоматизация запущена");
+      toast.success(t("automation.executedToast"));
       await fetchAutomations();
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось выполнить");
+      toast.error(e.response?.data?.message || t("automation.executeError"));
     } finally {
       setRunningId(null);
     }
@@ -133,9 +137,9 @@ export default function AutomationPage() {
       await automationApi.delete(deleteTarget.id);
       setAutomations((prev) => prev.filter((x) => x.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast.success("Автоматизация удалена");
+      toast.success(t("automation.deleteSuccess"));
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось удалить");
+      toast.error(e.response?.data?.message || t("automation.deleteError"));
     } finally {
       setIsDeleting(false);
     }
@@ -160,10 +164,10 @@ export default function AutomationPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[28px] md:text-[34px] font-bold text-white tracking-tight">
-              Автоматизации
+              {t("automation.title")}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              Триггеры и действия, которые работают за вас
+              {t("automation.subtitle")}
             </p>
           </div>
           <button
@@ -174,7 +178,7 @@ export default function AutomationPage() {
             className="flex items-center gap-2 px-4 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-500 shadow-sm"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Новая автоматизация</span>
+            <span className="hidden sm:inline">{t("automation.newAutomation")}</span>
           </button>
         </div>
 
@@ -187,7 +191,7 @@ export default function AutomationPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">{automations.length}</p>
-                <p className="text-xs text-gray-500">Всего</p>
+                <p className="text-xs text-gray-500">{t("automation.total")}</p>
               </div>
             </div>
           </div>
@@ -198,7 +202,7 @@ export default function AutomationPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">{active}</p>
-                <p className="text-xs text-gray-500">Активных</p>
+                <p className="text-xs text-gray-500">{t("automation.activeCount")}</p>
               </div>
             </div>
           </div>
@@ -209,7 +213,7 @@ export default function AutomationPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-white">{inactive}</p>
-                <p className="text-xs text-gray-500">Выключенных</p>
+                <p className="text-xs text-gray-500">{t("automation.inactiveCount")}</p>
               </div>
             </div>
           </div>
@@ -225,9 +229,9 @@ export default function AutomationPage() {
             <div className="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
               <Zap className="w-8 h-8 text-violet-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-1">Нет автоматизаций</h3>
+            <h3 className="text-lg font-semibold text-white mb-1">{t("automation.noAutomations")}</h3>
             <p className="text-gray-500 text-sm mb-6">
-              Создайте первую автоматизацию, чтобы сэкономить время на рутине
+              {t("automation.emptyDesc")}
             </p>
             <button
               onClick={() => {
@@ -237,7 +241,7 @@ export default function AutomationPage() {
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-500"
             >
               <Plus className="w-5 h-5" />
-              Новая автоматизация
+              {t("automation.newAutomation")}
             </button>
           </div>
         ) : (
@@ -261,7 +265,7 @@ export default function AutomationPage() {
                           : "bg-gray-500/20 text-gray-400"
                       )}
                     >
-                      {a.isActive ? "Активна" : "Выключена"}
+                      {a.isActive ? t("automation.active") : t("automation.statusOff")}
                     </span>
                   </div>
                   {a.description && (
@@ -270,15 +274,15 @@ export default function AutomationPage() {
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Zap className="w-3.5 h-3.5" />
-                      Триггер: {TRIGGER_LABELS[a.trigger?.type] || a.trigger?.type || "—"}
+                      {t("automation.trigger")}: {a.trigger?.type ? (TRIGGER_LABEL_KEYS[a.trigger.type] ? t(TRIGGER_LABEL_KEYS[a.trigger.type]) : a.trigger.type) : "—"}
                     </span>
                     <span className="flex items-center gap-1">
                       <Workflow className="w-3.5 h-3.5" />
-                      Действий: {Array.isArray(a.actions) ? a.actions.length : 0}
+                      {t("automation.actionsCountLabel")}: {Array.isArray(a.actions) ? a.actions.length : 0}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
-                      Последний запуск: {formatRelativeTime(a.lastRunAt)}
+                      {t("automation.lastRun")}: {formatRelativeTime(a.lastRunAt)}
                     </span>
                   </div>
                 </div>
@@ -286,7 +290,7 @@ export default function AutomationPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleToggle(a)}
-                    title={a.isActive ? "Выключить" : "Включить"}
+                    title={a.isActive ? t("automation.disable") : t("automation.enable")}
                     className={cn(
                       "p-2.5 rounded-xl",
                       a.isActive
@@ -299,7 +303,7 @@ export default function AutomationPage() {
                   <button
                     onClick={() => handleExecute(a)}
                     disabled={runningId === a.id || !a.isActive}
-                    title="Запустить сейчас"
+                    title={t("automation.runNow")}
                     className="p-2.5 rounded-xl bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 disabled:opacity-40"
                   >
                     {runningId === a.id ? (
@@ -313,14 +317,14 @@ export default function AutomationPage() {
                       setEditing(a);
                       setIsModalOpen(true);
                     }}
-                    title="Редактировать"
+                    title={t("common.edit")}
                     className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setDeleteTarget(a)}
-                    title="Удалить"
+                    title={t("common.delete")}
                     className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-400"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -347,10 +351,10 @@ export default function AutomationPage() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Удалить автоматизацию?"
-        description={`Вы уверены, что хотите удалить "${deleteTarget?.name}"? Это действие нельзя отменить.`}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("automation.deleteConfirm")}
+        description={t("automation.deleteConfirmDesc", { name: deleteTarget?.name || "" })}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={isDeleting}
       />
@@ -367,6 +371,7 @@ function AutomationModal({
   onClose: () => void;
   onSaved: (a: Automation) => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(automation?.name || "");
   const [description, setDescription] = useState(automation?.description || "");
   const [triggerType, setTriggerType] = useState(automation?.trigger?.type || "deal_created");
@@ -383,11 +388,11 @@ function AutomationModal({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Укажите название");
+      toast.error(t("automation.enterName"));
       return;
     }
     if (actions.length === 0) {
-      toast.error("Добавьте хотя бы одно действие");
+      toast.error(t("automation.addAtLeastOneAction"));
       return;
     }
     setSaving(true);
@@ -403,9 +408,9 @@ function AutomationModal({
         ? await automationApi.update(automation.id, payload)
         : await automationApi.create(payload);
       onSaved(res.data);
-      toast.success(automation ? "Сохранено" : "Автоматизация создана");
+      toast.success(automation ? t("automation.savedToast") : t("automation.createSuccess"));
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось сохранить");
+      toast.error(e.response?.data?.message || t("automation.saveError"));
     } finally {
       setSaving(false);
     }
@@ -418,10 +423,10 @@ function AutomationModal({
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white">
-              {automation ? "Редактировать автоматизацию" : "Новая автоматизация"}
+              {automation ? t("automation.editAutomation") : t("automation.newAutomation")}
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              Выберите триггер и настройте действия
+              {t("automation.modalSubtitle")}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl">
@@ -431,36 +436,36 @@ function AutomationModal({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Название</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t("automation.name")}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Например: Создать задачу при новой сделке"
+              placeholder={t("automation.namePlaceholder")}
               className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white placeholder-gray-500 border border-white/10 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Описание</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t("automation.description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="Коротко — что делает эта автоматизация"
+              placeholder={t("automation.descriptionPlaceholder")}
               className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white placeholder-gray-500 border border-white/10 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Триггер</label>
+            <label className="block text-sm font-medium text-gray-300 mb-2">{t("automation.trigger")}</label>
             <select
               value={triggerType}
               onChange={(e) => setTriggerType(e.target.value)}
               className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border border-white/10 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             >
-              {TRIGGER_OPTIONS.map((t) => (
-                <option key={t.value} value={t.value} className="bg-[#0a0a0f]">
-                  {t.label}
+              {TRIGGER_VALUES.map((value) => (
+                <option key={value} value={value} className="bg-[#0a0a0f]">
+                  {t(TRIGGER_LABEL_KEYS[value])}
                 </option>
               ))}
             </select>
@@ -468,12 +473,12 @@ function AutomationModal({
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-300">Действия</label>
+              <label className="block text-sm font-medium text-gray-300">{t("automation.actions")}</label>
               <button
                 onClick={addAction}
                 className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1"
               >
-                <Plus className="w-3.5 h-3.5" /> Добавить
+                <Plus className="w-3.5 h-3.5" /> {t("common.add")}
               </button>
             </div>
             <div className="space-y-3">
@@ -485,9 +490,9 @@ function AutomationModal({
                       onChange={(e) => updateAction(i, { type: e.target.value, config: {} })}
                       className="flex-1 px-3 py-2 bg-white/5 rounded-lg text-sm text-white border border-white/10"
                     >
-                      {ACTION_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value} className="bg-[#0a0a0f]">
-                          {o.label}
+                      {ACTION_VALUES.map((value) => (
+                        <option key={value} value={value} className="bg-[#0a0a0f]">
+                          {t(ACTION_LABEL_KEYS[value])}
                         </option>
                       ))}
                     </select>
@@ -515,7 +520,7 @@ function AutomationModal({
               onChange={(e) => setIsActive(e.target.checked)}
               className="w-4 h-4 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500"
             />
-            <span className="text-sm text-gray-300">Активна сразу после сохранения</span>
+            <span className="text-sm text-gray-300">{t("automation.activeImmediately")}</span>
           </label>
         </div>
 
@@ -524,7 +529,7 @@ function AutomationModal({
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5"
           >
-            Отмена
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -532,7 +537,7 @@ function AutomationModal({
             className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-violet-500 text-white hover:bg-purple-500 disabled:opacity-50 flex items-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {automation ? "Сохранить" : "Создать"}
+            {automation ? t("common.save") : t("common.create")}
           </button>
         </div>
       </div>
@@ -547,6 +552,7 @@ function ActionConfig({
   action: AutomationAction;
   onChange: (cfg: Record<string, any>) => void;
 }) {
+  const { t } = useTranslation();
   const cfg = action.config || {};
   const set = (k: string, v: any) => onChange({ ...cfg, [k]: v });
 
@@ -556,13 +562,13 @@ function ActionConfig({
         <input
           value={cfg.taskTitle || ""}
           onChange={(e) => set("taskTitle", e.target.value)}
-          placeholder="Название задачи (можно использовать {{dealTitle}})"
+          placeholder={t("automation.taskTitlePlaceholder")}
           className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
         <input
           value={cfg.taskDescription || ""}
           onChange={(e) => set("taskDescription", e.target.value)}
-          placeholder="Описание"
+          placeholder={t("automation.description")}
           className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
         <div className="flex gap-2">
@@ -570,7 +576,7 @@ function ActionConfig({
             type="number"
             value={cfg.taskDueDays || ""}
             onChange={(e) => set("taskDueDays", Number(e.target.value) || undefined)}
-            placeholder="Через N дней"
+            placeholder={t("automation.taskDueDaysPlaceholder")}
             className="flex-1 px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
           />
           <select
@@ -578,10 +584,10 @@ function ActionConfig({
             onChange={(e) => set("taskPriority", e.target.value)}
             className="flex-1 px-3 py-2 bg-white/5 rounded-lg text-sm text-white border border-white/10"
           >
-            <option value="LOW" className="bg-[#0a0a0f]">Низкий</option>
-            <option value="MEDIUM" className="bg-[#0a0a0f]">Средний</option>
-            <option value="HIGH" className="bg-[#0a0a0f]">Высокий</option>
-            <option value="URGENT" className="bg-[#0a0a0f]">Срочный</option>
+            <option value="LOW" className="bg-[#0a0a0f]">{t("tasks.priorityLow")}</option>
+            <option value="MEDIUM" className="bg-[#0a0a0f]">{t("tasks.priorityMedium")}</option>
+            <option value="HIGH" className="bg-[#0a0a0f]">{t("tasks.priorityHigh")}</option>
+            <option value="URGENT" className="bg-[#0a0a0f]">{t("tasks.priorityUrgent")}</option>
           </select>
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
@@ -591,7 +597,7 @@ function ActionConfig({
             onChange={(e) => set("assignToOwner", e.target.checked)}
             className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-violet-500"
           />
-          Назначить на владельца сущности
+          {t("automation.assignToOwner")}
         </label>
       </div>
     );
@@ -603,13 +609,13 @@ function ActionConfig({
         <input
           value={cfg.notificationTitle || ""}
           onChange={(e) => set("notificationTitle", e.target.value)}
-          placeholder="Заголовок уведомления"
+          placeholder={t("automation.notificationTitlePlaceholder")}
           className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
         <input
           value={cfg.notificationContent || ""}
           onChange={(e) => set("notificationContent", e.target.value)}
-          placeholder="Текст (поддерживает {{поле}})"
+          placeholder={t("automation.notificationContentPlaceholder")}
           className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
         <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
@@ -619,7 +625,7 @@ function ActionConfig({
             onChange={(e) => set("notifyOwner", e.target.checked)}
             className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-violet-500"
           />
-          Уведомить владельца сущности
+          {t("automation.notifyOwner")}
         </label>
       </div>
     );
@@ -631,13 +637,13 @@ function ActionConfig({
         <input
           value={cfg.fieldName || ""}
           onChange={(e) => set("fieldName", e.target.value)}
-          placeholder="Имя поля (напр. status)"
+          placeholder={t("automation.fieldNamePlaceholder")}
           className="flex-1 px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
         <input
           value={cfg.fieldValue ?? ""}
           onChange={(e) => set("fieldValue", e.target.value)}
-          placeholder="Новое значение"
+          placeholder={t("automation.fieldValuePlaceholder")}
           className="flex-1 px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
         />
       </div>
@@ -649,7 +655,7 @@ function ActionConfig({
       <input
         value={cfg.newOwnerId || ""}
         onChange={(e) => set("newOwnerId", e.target.value)}
-        placeholder="ID пользователя"
+        placeholder={t("automation.userIdPlaceholder")}
         className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
       />
     );
@@ -660,7 +666,7 @@ function ActionConfig({
       <input
         value={cfg.tagId || ""}
         onChange={(e) => set("tagId", e.target.value)}
-        placeholder="ID тега"
+        placeholder={t("automation.tagIdPlaceholder")}
         className="w-full px-3 py-2 bg-white/5 rounded-lg text-sm text-white placeholder-gray-500 border border-white/10"
       />
     );

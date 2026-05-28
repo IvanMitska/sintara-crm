@@ -17,6 +17,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Task, TaskStatus, PRIORITY_CONFIG, STATUS_CONFIG } from "./types";
+import { Task, TaskStatus } from "./types";
 
 interface TaskCardProps {
   task: Task;
@@ -54,9 +55,22 @@ export function TaskCard({
   onClick,
   onStatusChange,
 }: TaskCardProps) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
 
-  const priorityConfig = PRIORITY_CONFIG[task.priority];
+  const priorityLabelKeys: Record<string, string> = {
+    URGENT: "tasks.priorityUrgent",
+    HIGH: "tasks.priorityHigh",
+    MEDIUM: "tasks.priorityMedium",
+    LOW: "tasks.priorityLow",
+  };
+  const statusLabelKeys: Record<string, string> = {
+    PENDING: "tasks.statusPending",
+    IN_PROGRESS: "tasks.statusInProgress",
+    COMPLETED: "tasks.statusCompleted",
+    CANCELLED: "tasks.statusCancelled",
+  };
+  const priorityLabel = t(priorityLabelKeys[task.priority]);
 
   const isOverdue =
     task.dueDate &&
@@ -72,8 +86,8 @@ export function TaskCard({
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (d.toDateString() === today.toDateString()) return "Сегодня";
-    if (d.toDateString() === tomorrow.toDateString()) return "Завтра";
+    if (d.toDateString() === today.toDateString()) return t("tasks.today");
+    if (d.toDateString() === tomorrow.toDateString()) return t("tasks.tomorrow");
 
     return d.toLocaleDateString("ru-RU", {
       day: "numeric",
@@ -154,7 +168,7 @@ export function TaskCard({
 
         <div
           className={cn("h-2 w-2 rounded-full shrink-0", PRIORITY_DOTS[task.priority])}
-          title={priorityConfig.label}
+          title={priorityLabel}
         />
       </div>
     );
@@ -180,7 +194,7 @@ export function TaskCard({
           </p>
           <div
             className={cn("h-2 w-2 rounded-full shrink-0 mt-1.5", PRIORITY_DOTS[task.priority])}
-            title={priorityConfig.label}
+            title={priorityLabel}
           />
         </div>
 
@@ -321,7 +335,7 @@ export function TaskCard({
                 <DropdownMenuContent align="end" className="w-48 bg-[#0d0d14] border-white/10">
                   <DropdownMenuItem onClick={() => onEdit?.(task)} className="hover:bg-white/5">
                     <Edit className="h-4 w-4 mr-2" />
-                    Редактировать
+                    {t("common.edit")}
                   </DropdownMenuItem>
                   {task.status === "PENDING" && (
                     <DropdownMenuItem
@@ -329,7 +343,7 @@ export function TaskCard({
                       className="hover:bg-white/5"
                     >
                       <Play className="h-4 w-4 mr-2" />
-                      Начать выполнение
+                      {t("tasks.startProgress")}
                     </DropdownMenuItem>
                   )}
                   {task.status === "IN_PROGRESS" && (
@@ -338,7 +352,7 @@ export function TaskCard({
                       className="hover:bg-white/5"
                     >
                       <Pause className="h-4 w-4 mr-2" />
-                      Приостановить
+                      {t("tasks.pause")}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator className="bg-white/5" />
@@ -347,7 +361,7 @@ export function TaskCard({
                     onClick={() => onDelete?.(task.id)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Удалить
+                    {t("common.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -363,7 +377,7 @@ export function TaskCard({
                 )}
               >
                 <span className={cn("h-2 w-2 rounded-full", PRIORITY_DOTS[task.priority])} />
-                {priorityConfig.label}
+                {priorityLabel}
               </span>
 
               {/* Status */}
@@ -377,7 +391,7 @@ export function TaskCard({
                     : "bg-white/5 text-gray-400"
                 )}
               >
-                {STATUS_CONFIG[task.status].label}
+                {t(statusLabelKeys[task.status])}
               </span>
 
               {/* Due date */}
@@ -425,7 +439,7 @@ export function TaskCard({
             {totalChecklist > 0 && (
               <div className="mt-4">
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-gray-400 uppercase tracking-wide font-medium">Чеклист</span>
+                  <span className="text-gray-400 uppercase tracking-wide font-medium">{t("tasks.checklist")}</span>
                   <span className="font-semibold text-gray-300">
                     {completedChecklist}/{totalChecklist}
                   </span>
@@ -473,7 +487,7 @@ export function TaskCard({
                 </span>
               </div>
             ) : (
-              <span className="text-sm text-gray-500">Не назначено</span>
+              <span className="text-sm text-gray-500">{t("tasks.unassigned")}</span>
             )}
           </div>
 

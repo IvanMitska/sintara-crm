@@ -21,28 +21,33 @@ import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/components/providers/language-provider";
 
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Пароли не совпадают",
-    path: ["confirmPassword"],
-  });
-
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordFormValues = {
+  password: string;
+  confirmPassword: string;
+};
 
 export default function ResetPasswordPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const token = params.token as string;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const resetPasswordSchema = z
+    .object({
+      password: z.string().min(6, t("auth.passwordMin")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("auth.passwordsNoMatch"),
+      path: ["confirmPassword"],
+    });
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -61,12 +66,12 @@ export default function ResetPasswordPage() {
         password: data.password,
       });
       setIsSuccess(true);
-      toast.success("Пароль успешно изменён");
+      toast.success(t("auth.passwordResetSuccess"));
       setTimeout(() => {
         router.push("/login");
       }, 3000);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Ссылка недействительна или истекла");
+      toast.error(error.response?.data?.message || t("auth.resetLinkInvalid"));
     } finally {
       setIsLoading(false);
     }
@@ -83,13 +88,13 @@ export default function ResetPasswordPage() {
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Пароль изменён</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{t("auth.passwordChangedTitle")}</h2>
           <p className="text-gray-400 mb-6">
-            Ваш пароль успешно обновлён. Сейчас вы будете перенаправлены на страницу входа.
+            {t("auth.passwordChangedDesc")}
           </p>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <Icons.spinner className="w-4 h-4 animate-spin" />
-            Перенаправление...
+            {t("auth.redirecting")}
           </div>
         </motion.div>
       </div>
@@ -105,7 +110,7 @@ export default function ResetPasswordPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          Новый пароль
+          {t("auth.newPassword")}
         </motion.h2>
         <motion.p
           className="text-gray-400"
@@ -113,7 +118,7 @@ export default function ResetPasswordPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15 }}
         >
-          Придумайте новый надёжный пароль
+          {t("auth.newPasswordSubtitle")}
         </motion.p>
       </div>
 
@@ -129,13 +134,13 @@ export default function ResetPasswordPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-300 text-sm font-medium">Новый пароль</FormLabel>
+                  <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.newPassword")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Минимум 6 символов"
+                        placeholder={t("auth.minSixChars")}
                         disabled={isLoading}
                         className="pl-12 pr-12 h-12 bg-white/5 border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20 transition-all"
                         {...field}
@@ -165,13 +170,13 @@ export default function ResetPasswordPage() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-300 text-sm font-medium">Подтвердите пароль</FormLabel>
+                  <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.confirmPasswordLabel")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Повторите пароль"
+                        placeholder={t("auth.repeatPassword")}
                         disabled={isLoading}
                         className="pl-12 pr-12 h-12 bg-white/5 border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20 transition-all"
                         {...field}
@@ -204,7 +209,7 @@ export default function ResetPasswordPage() {
               {isLoading ? (
                 <Icons.spinner className="h-5 w-5 animate-spin" />
               ) : (
-                "Сохранить новый пароль"
+                t("auth.saveNewPassword")
               )}
             </Button>
           </motion.div>
@@ -222,7 +227,7 @@ export default function ResetPasswordPage() {
           className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Вернуться к входу
+          {t("auth.backToLogin")}
         </Link>
       </motion.div>
     </div>

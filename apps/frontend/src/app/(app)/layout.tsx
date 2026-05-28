@@ -34,6 +34,8 @@ import {
 import OnboardingTour, {
   useOnboardingTour,
 } from "@/components/onboarding/OnboardingTour";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { useTranslation } from "@/components/providers/language-provider";
 
 type NavItem = {
   name: string;
@@ -182,6 +184,7 @@ export default function AppLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const { user, logout, isAuthenticated, hasHydrated } = useAuthStore();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -193,31 +196,31 @@ export default function AppLayout({
 
   const mainNavigation: NavItem[] = useMemo(
     () => [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, tourId: "dashboard" },
-      { name: "Лиды", href: "/leads", icon: Zap, tourId: "leads" },
-      { name: "Сделки", href: "/deals", icon: Briefcase, tourId: "deals" },
-      { name: "Контакты", href: "/contacts", icon: Users, tourId: "contacts" },
-      { name: "Компании", href: "/companies", icon: Building2, tourId: "companies" },
-      { name: "Онлайн-запись", href: "/booking", icon: CalendarClock },
+      { name: t("nav.dashboard"), href: "/dashboard", icon: LayoutDashboard, tourId: "dashboard" },
+      { name: t("nav.leads"), href: "/leads", icon: Zap, tourId: "leads" },
+      { name: t("nav.deals"), href: "/deals", icon: Briefcase, tourId: "deals" },
+      { name: t("nav.contacts"), href: "/contacts", icon: Users, tourId: "contacts" },
+      { name: t("nav.companies"), href: "/companies", icon: Building2, tourId: "companies" },
+      { name: t("nav.booking"), href: "/booking", icon: CalendarClock },
     ],
-    []
+    [t]
   );
 
   const secondaryNavigation: NavItem[] = useMemo(
     () => [
-      { name: "Задачи", href: "/tasks", icon: CheckSquare, tourId: "tasks" },
+      { name: t("nav.tasks"), href: "/tasks", icon: CheckSquare, tourId: "tasks" },
       {
-        name: "Сообщения",
+        name: t("nav.messages"),
         href: "/messages",
         icon: MessageSquare,
         badge: navCounts.unreadMessages || undefined,
         tourId: "messages",
       },
-      { name: "Сотрудники", href: "/employees", icon: UserCog },
-      { name: "Автоматизации", href: "/automation", icon: Workflow },
-      { name: "Аналитика", href: "/analytics", icon: BarChart3, tourId: "analytics" },
+      { name: t("nav.employees"), href: "/employees", icon: UserCog },
+      { name: t("nav.automation"), href: "/automation", icon: Workflow },
+      { name: t("nav.analytics"), href: "/analytics", icon: BarChart3, tourId: "analytics" },
     ],
-    [navCounts]
+    [navCounts, t]
   );
 
   const allNavigation = useMemo(
@@ -245,9 +248,9 @@ export default function AppLayout({
       allNavigation[5], // Онлайн-запись
       allNavigation[8], // Сотрудники
       allNavigation[9], // Аналитика
-      { name: "Настройки", href: "/settings", icon: Settings },
+      { name: t("nav.settings"), href: "/settings", icon: Settings },
     ],
-    [allNavigation]
+    [allNavigation, t]
   );
 
   useEffect(() => {
@@ -286,13 +289,13 @@ export default function AppLayout({
   if (!hasHydrated || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#050508]">
-        <div className="text-white">Загрузка...</div>
+        <div className="text-white">{t("common.loading")}</div>
       </div>
     );
   }
 
   const displayUser = user || {
-    firstName: "Пользователь",
+    firstName: t("nav.user"),
     lastName: "",
     email: "",
     role: "MANAGER",
@@ -300,12 +303,12 @@ export default function AppLayout({
 
   const roleLabel =
     displayUser.role === "ADMIN"
-      ? "Администратор"
+      ? t("roles.admin")
       : displayUser.role === "SUPERVISOR"
-        ? "Супервайзер"
+        ? t("roles.supervisor")
         : displayUser.role === "OPERATOR"
-          ? "Оператор"
-          : "Менеджер";
+          ? t("roles.operator")
+          : t("roles.manager");
 
   return (
     <div className="flex h-[100dvh] cosmic-bg overflow-hidden">
@@ -350,7 +353,7 @@ export default function AppLayout({
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1 scrollbar-minimal">
           {sidebarExpanded && (
             <p className="px-3 py-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-              Основное
+              {t("nav.sectionMain")}
             </p>
           )}
           {mainNavigation.map((item) => (
@@ -364,7 +367,7 @@ export default function AppLayout({
 
           {sidebarExpanded ? (
             <p className="px-3 py-2 mt-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-              Инструменты
+              {t("nav.sectionTools")}
             </p>
           ) : (
             <div className="my-3 border-t border-white/5" />
@@ -390,10 +393,10 @@ export default function AppLayout({
               )}
             >
               <GraduationCap size={20} strokeWidth={2} className="shrink-0" />
-              {sidebarExpanded && <span>Обучение</span>}
+              {sidebarExpanded && <span>{t("nav.training")}</span>}
               {!sidebarExpanded && (
                 <div className="absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-[#1a1a2e] border border-white/10 text-sm text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
-                  Обучение
+                  {t("nav.training")}
                 </div>
               )}
             </button>
@@ -412,10 +415,10 @@ export default function AppLayout({
               strokeWidth={isItemActive("/settings") ? 2.5 : 2}
               className="shrink-0"
             />
-            {sidebarExpanded && <span>Настройки</span>}
+            {sidebarExpanded && <span>{t("nav.settings")}</span>}
             {!sidebarExpanded && (
               <div className="absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-[#1a1a2e] border border-white/10 text-sm text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
-                Настройки
+                {t("nav.settings")}
               </div>
             )}
           </Link>
@@ -436,7 +439,7 @@ export default function AppLayout({
                 <button
                   onClick={handleLogout}
                   className="p-2 rounded-lg hover:bg-white/10"
-                  title="Выйти"
+                  title={t("nav.logout")}
                 >
                   <LogOut size={16} className="text-gray-500" />
                 </button>
@@ -447,12 +450,12 @@ export default function AppLayout({
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center p-2.5 rounded-xl text-gray-400 hover:bg-white/5"
-                title="Выйти"
+                title={t("nav.logout")}
               >
                 <LogOut size={20} />
               </button>
               <div className="absolute left-full ml-2 bottom-0 px-2.5 py-1.5 rounded-lg bg-[#1a1a2e] border border-white/10 text-sm text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 shadow-xl">
-                Выйти
+                {t("nav.logout")}
               </div>
             </div>
           )}
@@ -471,7 +474,7 @@ export default function AppLayout({
                 !sidebarExpanded && "rotate-180"
               )}
             />
-            {sidebarExpanded && <span className="text-sm">Свернуть</span>}
+            {sidebarExpanded && <span className="text-sm">{t("nav.collapse")}</span>}
           </button>
         </div>
       </aside>
@@ -503,7 +506,7 @@ export default function AppLayout({
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 <input
                   type="search"
-                  placeholder="Поиск по CRM..."
+                  placeholder={t("nav.searchCrm")}
                   className="w-full rounded-xl bg-white/5 border border-white/10 pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -520,12 +523,7 @@ export default function AppLayout({
               <button className="p-2.5 rounded-xl hover:bg-white/10 lg:hidden">
                 <Search size={20} className="text-gray-400" />
               </button>
-              <button className="relative p-2.5 rounded-xl hover:bg-white/10">
-                <Bell size={20} className="text-gray-400" />
-                {navCounts.unreadMessages > 0 && (
-                  <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-cyan-500 border-2 border-[#0d0d14]" />
-                )}
-              </button>
+              <NotificationBell />
               <div className="hidden lg:flex items-center gap-3 pl-3 ml-1 border-l border-white/10">
                 <div className="text-right">
                   <p className="text-sm font-semibold text-white">
@@ -570,7 +568,7 @@ export default function AppLayout({
             )}
           >
             <MoreHorizontal size={24} strokeWidth={1.8} />
-            <span className="text-[11px] font-medium">Ещё</span>
+            <span className="text-[11px] font-medium">{t("nav.more")}</span>
             {isMoreActive && (
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-violet-400" />
             )}
@@ -585,7 +583,7 @@ export default function AppLayout({
           className="glass-strong border-white/10 rounded-t-2xl px-4 pb-8 pt-3 max-h-[70dvh]"
         >
           <span className="sr-only">
-            <SheetTitle>Навигация</SheetTitle>
+            <SheetTitle>{t("nav.navigation")}</SheetTitle>
           </span>
 
           <div className="flex justify-center mb-4">
@@ -618,7 +616,7 @@ export default function AppLayout({
               <button
                 onClick={handleLogout}
                 className="p-2 rounded-lg hover:bg-white/10"
-                title="Выйти"
+                title={t("nav.logout")}
               >
                 <LogOut size={16} className="text-gray-500" />
               </button>

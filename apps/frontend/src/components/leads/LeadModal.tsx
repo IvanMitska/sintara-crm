@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Lead {
   id?: string;
@@ -33,21 +34,22 @@ interface LeadModalProps {
 }
 
 const sources = [
-  { id: "website", label: "Сайт", icon: Globe, color: "text-blue-400", bg: "bg-blue-500/20" },
-  { id: "call", label: "Звонок", icon: Phone, color: "text-green-400", bg: "bg-green-500/20" },
-  { id: "email", label: "Email", icon: Mail, color: "text-purple-400", bg: "bg-purple-500/20" },
-  { id: "social", label: "Соцсети", icon: Instagram, color: "text-pink-400", bg: "bg-pink-500/20" },
-  { id: "telegram", label: "Telegram", icon: MessageSquare, color: "text-sky-400", bg: "bg-sky-500/20" },
+  { id: "website", labelKey: "leads.sourceWebsite", icon: Globe, color: "text-blue-400", bg: "bg-blue-500/20" },
+  { id: "call", labelKey: "leads.sourceCall", icon: Phone, color: "text-green-400", bg: "bg-green-500/20" },
+  { id: "email", labelKey: "leads.sourceEmail", icon: Mail, color: "text-purple-400", bg: "bg-purple-500/20" },
+  { id: "social", labelKey: "leads.sourceSocial", icon: Instagram, color: "text-pink-400", bg: "bg-pink-500/20" },
+  { id: "telegram", labelKey: "leads.sourceTelegram", icon: MessageSquare, color: "text-sky-400", bg: "bg-sky-500/20" },
 ];
 
 const statuses = [
-  { id: "NEW", label: "Новый", color: "#3B82F6" },
-  { id: "IN_PROGRESS", label: "В работе", color: "#8B5CF6" },
-  { id: "QUALIFIED", label: "Квалифицирован", color: "#F59E0B" },
-  { id: "CONVERTED", label: "Конвертирован", color: "#10B981" },
+  { id: "NEW", labelKey: "leads.statusNew", color: "#3B82F6" },
+  { id: "IN_PROGRESS", labelKey: "leads.stageInProgress", color: "#8B5CF6" },
+  { id: "QUALIFIED", labelKey: "leads.stageQualified", color: "#F59E0B" },
+  { id: "CONVERTED", labelKey: "leads.stageConverted", color: "#10B981" },
 ];
 
 export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModalProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Lead>({
     name: "",
     email: "",
@@ -89,15 +91,15 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Имя обязательно";
+      newErrors.name = t("leads.nameRequired");
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Неверный формат email";
+      newErrors.email = t("leads.invalidEmail");
     }
 
     if (formData.phone && !/^[\d\s\+\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = "Неверный формат телефона";
+      newErrors.phone = t("leads.invalidPhone");
     }
 
     setErrors(newErrors);
@@ -115,7 +117,34 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
     });
   };
 
-  if (!isOpen) return null;
+  // Mount/visible separation for smooth slide-in / slide-out
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      // next frame so the transition actually runs
+      const r = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(r);
+    } else if (mounted) {
+      setVisible(false);
+      const t = setTimeout(() => setMounted(false), 320);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
+  // lock body scroll while open
+  useEffect(() => {
+    if (!mounted) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   const isEdit = !!lead?.id;
 
@@ -123,17 +152,24 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 z-[60]"
         onClick={onClose}
+        className={cn(
+          "fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] transition-opacity duration-300",
+          visible ? "opacity-100" : "opacity-0"
+        )}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div className="bg-[#0d0d14] rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-hidden border border-white/10">
+      {/* Side panel */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 bottom-0 z-[70] w-full sm:w-[560px] md:w-[620px] max-w-[calc(100vw-64px)] flex flex-col bg-[#0d0d14] border-l border-white/10 shadow-[-20px_0_60px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out will-change-transform",
+          visible ? "translate-x-0" : "translate-x-full"
+        )}
+      >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
             <h2 className="text-xl font-bold text-white">
-              {isEdit ? "Редактировать лид" : "Новый лид"}
+              {isEdit ? t("leads.editLead") : t("leads.newLead")}
             </h2>
             <button
               onClick={onClose}
@@ -144,11 +180,11 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Имя лида <span className="text-red-500">*</span>
+                {t("leads.nameLabel")} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -156,7 +192,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Введите имя"
+                  placeholder={t("leads.namePlaceholder")}
                   className={cn(
                     "w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2  placeholder:text-gray-500",
                     errors.name ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-violet-500 focus:bg-white/10"
@@ -169,13 +205,13 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
             {/* Company */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Компания
+                {t("common.company")}
               </label>
               <input
                 type="text"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                placeholder="Название компании"
+                placeholder={t("leads.companyPlaceholder")}
                 className="w-full px-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  placeholder:text-gray-500"
               />
             </div>
@@ -184,7 +220,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Email
+                  {t("common.email")}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -203,7 +239,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Телефон
+                  {t("common.phone")}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -225,7 +261,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
             {/* Source */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Источник
+                {t("leads.colSource")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {sources.map((source) => {
@@ -245,7 +281,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
                       )}
                     >
                       <Icon className="w-4 h-4" />
-                      {source.label}
+                      {t(source.labelKey)}
                     </button>
                   );
                 })}
@@ -255,7 +291,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
             {/* Status */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Статус
+                {t("common.status")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {statuses.map((status) => {
@@ -279,7 +315,7 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
                         className="w-2.5 h-2.5 rounded-full"
                         style={{ backgroundColor: status.color }}
                       />
-                      {status.label}
+                      {t(status.labelKey)}
                     </button>
                   );
                 })}
@@ -289,12 +325,12 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Описание
+                {t("leads.description")}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Дополнительная информация о лиде..."
+                placeholder={t("leads.descriptionPlaceholder")}
                 rows={3}
                 className="w-full px-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  resize-none placeholder:text-gray-500"
               />
@@ -302,13 +338,13 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
           </form>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-white/5">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10 bg-white/5 shrink-0">
             <button
               type="button"
               onClick={onClose}
               className="px-5 py-2.5 text-gray-400 font-medium rounded-xl hover:bg-white/5 "
             >
-              Отмена
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleSubmit}
@@ -316,10 +352,9 @@ export function LeadModal({ isOpen, onClose, onSave, lead, isLoading }: LeadModa
               className="flex items-center gap-2 px-6 py-2.5 bg-violet-500 text-white font-medium rounded-xl hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed "
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEdit ? "Сохранить" : "Создать"}
+              {isEdit ? t("common.save") : t("common.create")}
             </button>
           </div>
-        </div>
       </div>
     </>
   );

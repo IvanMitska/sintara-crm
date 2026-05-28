@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Company {
   id?: string;
@@ -38,19 +39,20 @@ interface CompanyModalProps {
   isLoading?: boolean;
 }
 
-const industries = [
-  { id: "IT", label: "IT", bg: "bg-blue-500/20", text: "text-blue-400" },
-  { id: "Финансы", label: "Финансы", bg: "bg-green-500/20", text: "text-green-400" },
-  { id: "Торговля", label: "Торговля", bg: "bg-orange-500/20", text: "text-orange-400" },
-  { id: "Строительство", label: "Строительство", bg: "bg-amber-500/20", text: "text-amber-400" },
-  { id: "Медиа", label: "Медиа", bg: "bg-purple-500/20", text: "text-purple-400" },
-  { id: "Консалтинг", label: "Консалтинг", bg: "bg-indigo-500/20", text: "text-indigo-400" },
-  { id: "Производство", label: "Производство", bg: "bg-rose-500/20", text: "text-rose-400" },
-  { id: "Логистика", label: "Логистика", bg: "bg-cyan-500/20", text: "text-cyan-400" },
-];
-
 export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: CompanyModalProps) {
+  const { t } = useTranslation();
   const { symbol } = useCurrency();
+
+  const industries = [
+    { id: "IT", label: "IT", bg: "bg-blue-500/20", text: "text-blue-400" },
+    { id: "Финансы", label: t("companies.industryFinance"), bg: "bg-green-500/20", text: "text-green-400" },
+    { id: "Торговля", label: t("companies.industryTrade"), bg: "bg-orange-500/20", text: "text-orange-400" },
+    { id: "Строительство", label: t("companies.industryConstruction"), bg: "bg-amber-500/20", text: "text-amber-400" },
+    { id: "Медиа", label: t("companies.industryMedia"), bg: "bg-purple-500/20", text: "text-purple-400" },
+    { id: "Консалтинг", label: t("companies.industryConsulting"), bg: "bg-indigo-500/20", text: "text-indigo-400" },
+    { id: "Производство", label: t("companies.industryManufacturing"), bg: "bg-rose-500/20", text: "text-rose-400" },
+    { id: "Логистика", label: t("companies.industryLogistics"), bg: "bg-cyan-500/20", text: "text-cyan-400" },
+  ];
   const [formData, setFormData] = useState<Company>({
     name: "",
     inn: "",
@@ -101,21 +103,21 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Название компании обязательно";
+      newErrors.name = t("companies.errorNameRequired");
     }
 
     if (!formData.inn.trim()) {
-      newErrors.inn = "ИНН обязателен";
+      newErrors.inn = t("companies.errorInnRequired");
     } else if (!/^\d{10,12}$/.test(formData.inn)) {
-      newErrors.inn = "ИНН должен содержать 10-12 цифр";
+      newErrors.inn = t("companies.errorInnFormat");
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Неверный формат email";
+      newErrors.email = t("companies.errorEmailFormat");
     }
 
     if (formData.phone && !/^[\d\s\+\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = "Неверный формат телефона";
+      newErrors.phone = t("companies.errorPhoneFormat");
     }
 
     setErrors(newErrors);
@@ -156,7 +158,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
             <h2 className="text-xl font-bold text-white">
-              {isEdit ? "Редактировать компанию" : "Новая компания"}
+              {isEdit ? t("companies.editCompany") : t("companies.newCompany")}
             </h2>
             <button
               onClick={onClose}
@@ -172,7 +174,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Название компании <span className="text-red-500">*</span>
+                  {t("companies.fieldName")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -180,7 +182,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="ООО Компания"
+                    placeholder={t("companies.fieldNamePlaceholder")}
                     className={cn(
                       "w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2  placeholder:text-gray-500",
                       errors.name ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-violet-500 focus:bg-white/10"
@@ -191,7 +193,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  ИНН <span className="text-red-500">*</span>
+                  {t("companies.inn")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -213,7 +215,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             {/* Industry */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Отрасль
+                {t("companies.industry")}
               </label>
               <div className="flex flex-wrap gap-2">
                 {industries.map((industry) => {
@@ -242,7 +244,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Годовая выручка ({symbol})
+                  {t("companies.fieldRevenue", { symbol })}
                 </label>
                 <div className="relative">
                   <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -257,7 +259,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Количество сотрудников
+                  {t("companies.fieldEmployees")}
                 </label>
                 <div className="relative">
                   <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -277,7 +279,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Телефон
+                  {t("common.phone")}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -296,7 +298,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Email
+                  {t("common.email")}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -318,7 +320,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             {/* Website */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Сайт
+                {t("companies.website")}
               </label>
               <div className="relative">
                 <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -335,14 +337,14 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             {/* Address */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Адрес
+                {t("companies.address")}
               </label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-3 w-5 h-5 text-gray-400" />
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Москва, ул. Примерная, 10"
+                  placeholder={t("companies.fieldAddressPlaceholder")}
                   rows={2}
                   className="w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  resize-none placeholder:text-gray-500"
                 />
@@ -352,7 +354,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
             {/* Status */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Статус
+                {t("common.status")}
               </label>
               <div className="flex gap-3">
                 <button
@@ -366,7 +368,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
                   )}
                 >
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  Активная
+                  {t("companies.statusActive")}
                 </button>
                 <button
                   type="button"
@@ -379,7 +381,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
                   )}
                 >
                   <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-                  Неактивная
+                  {t("companies.statusInactiveForm")}
                 </button>
               </div>
             </div>
@@ -392,7 +394,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
               onClick={onClose}
               className="px-5 py-2.5 text-gray-400 font-medium rounded-xl hover:bg-white/5 "
             >
-              Отмена
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleSubmit}
@@ -400,7 +402,7 @@ export function CompanyModal({ isOpen, onClose, onSave, company, isLoading }: Co
               className="flex items-center gap-2 px-6 py-2.5 bg-violet-500 text-white font-medium rounded-xl hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed "
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEdit ? "Сохранить" : "Создать"}
+              {isEdit ? t("common.save") : t("common.create")}
             </button>
           </div>
         </div>

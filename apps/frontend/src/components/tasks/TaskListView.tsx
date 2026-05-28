@@ -13,6 +13,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { TaskCard } from "./TaskCard";
 import { Task, TaskStatus } from "./types";
 
@@ -43,6 +44,7 @@ export function TaskListView({
   onTaskDelete,
   onStatusChange,
 }: TaskListViewProps) {
+  const { t } = useTranslation();
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
@@ -61,7 +63,7 @@ export function TaskListView({
 
   const groupTasks = (): TaskGroup[] => {
     if (groupBy === "none") {
-      return [{ id: "all", title: "Все задачи", tasks }];
+      return [{ id: "all", title: t("tasks.allTasks"), tasks }];
     }
 
     if (groupBy === "status") {
@@ -79,21 +81,21 @@ export function TaskListView({
       return [
         {
           id: "IN_PROGRESS",
-          title: "В работе",
+          title: t("tasks.statusInProgress"),
           icon: <Clock className="h-4 w-4" />,
           accentColor: "bg-violet-500",
           tasks: statusGroups.IN_PROGRESS,
         },
         {
           id: "PENDING",
-          title: "Ожидают",
+          title: t("tasks.statusPending"),
           icon: <Clock className="h-4 w-4" />,
           accentColor: "bg-gray-400",
           tasks: statusGroups.PENDING,
         },
         {
           id: "COMPLETED",
-          title: "Выполнено",
+          title: t("tasks.statusCompleted"),
           icon: <CheckCircle2 className="h-4 w-4" />,
           accentColor: "bg-emerald-500",
           tasks: statusGroups.COMPLETED,
@@ -116,22 +118,22 @@ export function TaskListView({
 
       const priorityConfig = {
         URGENT: {
-          title: "Срочные",
+          title: t("tasks.priorityGroupUrgent"),
           icon: <AlertTriangle className="h-4 w-4" />,
           accentColor: "bg-red-500",
         },
         HIGH: {
-          title: "Высокий приоритет",
+          title: t("tasks.priorityGroupHigh"),
           icon: <Flag className="h-4 w-4" />,
           accentColor: "bg-orange-500",
         },
         MEDIUM: {
-          title: "Средний приоритет",
+          title: t("tasks.priorityGroupMedium"),
           icon: <Flag className="h-4 w-4" />,
           accentColor: "bg-yellow-500",
         },
         LOW: {
-          title: "Низкий приоритет",
+          title: t("tasks.priorityGroupLow"),
           icon: <Flag className="h-4 w-4" />,
           accentColor: "bg-emerald-500",
         },
@@ -190,42 +192,42 @@ export function TaskListView({
       return [
         {
           id: "overdue",
-          title: "Просрочено",
+          title: t("tasks.overdueShort"),
           icon: <AlertTriangle className="h-4 w-4" />,
           accentColor: "bg-red-500",
           tasks: groups.overdue,
         },
         {
           id: "today",
-          title: "Сегодня",
+          title: t("tasks.today"),
           icon: <Calendar className="h-4 w-4" />,
           accentColor: "bg-violet-500",
           tasks: groups.today,
         },
         {
           id: "tomorrow",
-          title: "Завтра",
+          title: t("tasks.tomorrow"),
           icon: <Calendar className="h-4 w-4" />,
           accentColor: "bg-purple-500",
           tasks: groups.tomorrow,
         },
         {
           id: "thisWeek",
-          title: "На этой неделе",
+          title: t("tasks.thisWeek"),
           icon: <Calendar className="h-4 w-4" />,
           accentColor: "bg-indigo-500",
           tasks: groups.thisWeek,
         },
         {
           id: "later",
-          title: "Позже",
+          title: t("tasks.later"),
           icon: <Calendar className="h-4 w-4" />,
           accentColor: "bg-gray-400",
           tasks: groups.later,
         },
         {
           id: "noDueDate",
-          title: "Без срока",
+          title: t("tasks.noDueDateGroup"),
           icon: <Inbox className="h-4 w-4" />,
           accentColor: "bg-gray-500",
           tasks: groups.noDueDate,
@@ -262,7 +264,7 @@ export function TaskListView({
       if (unassigned.length > 0) {
         groups.push({
           id: "unassigned",
-          title: "Не назначено",
+          title: t("tasks.unassigned"),
           icon: <User className="h-4 w-4" />,
           accentColor: "bg-gray-600",
           tasks: unassigned,
@@ -272,7 +274,7 @@ export function TaskListView({
       return groups;
     }
 
-    return [{ id: "all", title: "Все задачи", tasks }];
+    return [{ id: "all", title: t("tasks.allTasks"), tasks }];
   };
 
   const groups = groupTasks();
@@ -283,8 +285,8 @@ export function TaskListView({
         <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
           <Inbox className="h-8 w-8" />
         </div>
-        <p className="text-lg font-medium text-gray-300">Нет задач</p>
-        <p className="text-sm mt-1 text-gray-500">Создайте новую задачу для начала работы</p>
+        <p className="text-lg font-medium text-gray-300">{t("tasks.noTasks")}</p>
+        <p className="text-sm mt-1 text-gray-500">{t("tasks.emptyHint")}</p>
       </div>
     );
   }
@@ -294,7 +296,7 @@ export function TaskListView({
       {groups.map((group) => {
         const isCollapsed = collapsedGroups.has(group.id);
         const completedCount = group.tasks.filter(
-          (t) => t.status === "COMPLETED"
+          (task) => task.status === "COMPLETED"
         ).length;
 
         return (

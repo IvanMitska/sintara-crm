@@ -1,6 +1,7 @@
-import { IsString, IsNumber, IsOptional, IsDateString, IsArray, IsUUID, Min, Max, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, IsArray, IsUUID, IsEnum, Min, Max, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DealPriority, DealTemperature } from '@prisma/client';
 
 class DealProductDto {
   @ApiProperty({ description: 'ID продукта' })
@@ -82,4 +83,20 @@ export class CreateDealDto {
   @ApiPropertyOptional({ description: 'Кастомные поля', type: Object })
   @IsOptional()
   customFields?: Record<string, any>;
+
+  @ApiPropertyOptional({ enum: DealPriority, description: 'Приоритет сделки' })
+  @IsOptional()
+  @IsEnum(DealPriority)
+  priority?: DealPriority;
+
+  @ApiPropertyOptional({ enum: DealTemperature, description: 'Температура сделки' })
+  @IsOptional()
+  @IsEnum(DealTemperature)
+  temperature?: DealTemperature;
+
+  @ApiPropertyOptional({ description: 'Теги сделки', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

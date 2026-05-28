@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "
 import { X, ChevronDown, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslation } from "@/components/providers/language-provider";
+
+type TranslateFn = (key: string) => string;
 
 type TourStep = {
   targetSelector: string;
@@ -12,64 +15,58 @@ type TourStep = {
   navigateTo?: string;
 };
 
-const TOUR_STEPS: TourStep[] = [
-  {
-    targetSelector: '[data-tour="dashboard"]',
-    title: "Добро пожаловать в Sintara CRM!",
-    description:
-      "Это ваш Dashboard — главная панель с ключевыми показателями: активные сделки, задачи на сегодня, воронка продаж и последняя активность.",
-    navigateTo: "/dashboard",
-  },
-  {
-    targetSelector: '[data-tour="leads"]',
-    title: "Лиды — входящие заявки",
-    description:
-      "Здесь вы управляете входящими лидами. Добавляйте новые лиды, назначайте ответственных и отслеживайте источники привлечения клиентов.",
-    navigateTo: "/leads",
-  },
-  {
-    targetSelector: '[data-tour="deals"]',
-    title: "Сделки — воронка продаж",
-    description:
-      "Управляйте сделками в виде канбан-доски. Перетаскивайте сделки по этапам воронки, отслеживайте суммы и назначайте ответственных менеджеров.",
-    navigateTo: "/deals",
-  },
-  {
-    targetSelector: '[data-tour="contacts"]',
-    title: "Контакты — база клиентов",
-    description:
-      "Ведите базу контактов с телефонами, email и тегами. Используйте поиск и фильтры для быстрого доступа к нужному клиенту.",
-    navigateTo: "/contacts",
-  },
-  {
-    targetSelector: '[data-tour="companies"]',
-    title: "Компании — организации",
-    description:
-      "Храните информацию о компаниях: ИНН, выручку, количество сотрудников. Связывайте компании с контактами и сделками.",
-    navigateTo: "/companies",
-  },
-  {
-    targetSelector: '[data-tour="tasks"]',
-    title: "Задачи — планирование работы",
-    description:
-      "Создавайте задачи с приоритетами и дедлайнами. Используйте канбан-доску, список или календарь для удобного управления.",
-    navigateTo: "/tasks",
-  },
-  {
-    targetSelector: '[data-tour="messages"]',
-    title: "Сообщения — коммуникация",
-    description:
-      "Общайтесь с клиентами через WhatsApp, Email и другие каналы прямо из CRM. Вся история переписки в одном месте.",
-    navigateTo: "/messages",
-  },
-  {
-    targetSelector: '[data-tour="analytics"]',
-    title: "Аналитика — отчёты",
-    description:
-      "Анализируйте продажи, конверсию воронки и эффективность менеджеров. Скачивайте отчёты за любой период.",
-    navigateTo: "/analytics",
-  },
-];
+function getTourSteps(t: TranslateFn): TourStep[] {
+  return [
+    {
+      targetSelector: '[data-tour="dashboard"]',
+      title: t("onboarding.welcomeTitle"),
+      description: t("onboarding.tourDashboardDesc"),
+      navigateTo: "/dashboard",
+    },
+    {
+      targetSelector: '[data-tour="leads"]',
+      title: t("onboarding.tourLeadsTitle"),
+      description: t("onboarding.tourLeadsDesc"),
+      navigateTo: "/leads",
+    },
+    {
+      targetSelector: '[data-tour="deals"]',
+      title: t("onboarding.tourDealsTitle"),
+      description: t("onboarding.tourDealsDesc"),
+      navigateTo: "/deals",
+    },
+    {
+      targetSelector: '[data-tour="contacts"]',
+      title: t("onboarding.tourContactsTitle"),
+      description: t("onboarding.tourContactsDesc"),
+      navigateTo: "/contacts",
+    },
+    {
+      targetSelector: '[data-tour="companies"]',
+      title: t("onboarding.tourCompaniesTitle"),
+      description: t("onboarding.tourCompaniesDesc"),
+      navigateTo: "/companies",
+    },
+    {
+      targetSelector: '[data-tour="tasks"]',
+      title: t("onboarding.tourTasksTitle"),
+      description: t("onboarding.tourTasksDesc"),
+      navigateTo: "/tasks",
+    },
+    {
+      targetSelector: '[data-tour="messages"]',
+      title: t("onboarding.tourMessagesTitle"),
+      description: t("onboarding.tourMessagesDesc"),
+      navigateTo: "/messages",
+    },
+    {
+      targetSelector: '[data-tour="analytics"]',
+      title: t("onboarding.tourAnalyticsTitle"),
+      description: t("onboarding.tourAnalyticsDesc"),
+      navigateTo: "/analytics",
+    },
+  ];
+}
 
 const STORAGE_KEY = "sintara-onboarding-completed";
 
@@ -101,6 +98,8 @@ export function useOnboardingTour() {
 }
 
 export default function OnboardingTour() {
+  const { t } = useTranslation();
+  const tourSteps = getTourSteps(t);
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [ready, setReady] = useState(false);
@@ -140,7 +139,7 @@ export default function OnboardingTour() {
   }, []);
 
   const positionTooltip = useCallback(() => {
-    const step = TOUR_STEPS[currentStep];
+    const step = tourSteps[currentStep];
     const target = document.querySelector(step.targetSelector);
     if (!target || isMobile) return;
 
@@ -157,12 +156,12 @@ export default function OnboardingTour() {
     }
 
     setTooltipPos({ top, left });
-  }, [currentStep, isMobile]);
+  }, [currentStep, isMobile, tourSteps]);
 
   useEffect(() => {
     if (!isVisible) return;
 
-    const step = TOUR_STEPS[currentStep];
+    const step = tourSteps[currentStep];
     if (step.navigateTo && pathname !== step.navigateTo) {
       router.push(step.navigateTo);
     }
@@ -173,7 +172,7 @@ export default function OnboardingTour() {
       clearTimeout(timer);
       window.removeEventListener("resize", positionTooltip);
     };
-  }, [currentStep, isVisible, positionTooltip, pathname, router]);
+  }, [currentStep, isVisible, positionTooltip, pathname, router, tourSteps]);
 
   const handleClose = useCallback(() => {
     setIsVisible(false);
@@ -183,12 +182,12 @@ export default function OnboardingTour() {
   }, []);
 
   const handleNext = useCallback(() => {
-    if (currentStep < TOUR_STEPS.length - 1) {
+    if (currentStep < tourSteps.length - 1) {
       setCurrentStep((s) => s + 1);
     } else {
       handleClose();
     }
-  }, [currentStep, handleClose]);
+  }, [currentStep, handleClose, tourSteps.length]);
 
   const handlePrev = useCallback(() => {
     if (currentStep > 0) {
@@ -202,8 +201,8 @@ export default function OnboardingTour() {
 
   if (!isVisible || !ready) return null;
 
-  const step = TOUR_STEPS[currentStep];
-  const isLast = currentStep === TOUR_STEPS.length - 1;
+  const step = tourSteps[currentStep];
+  const isLast = currentStep === tourSteps.length - 1;
 
   return (
     <>
@@ -256,8 +255,9 @@ export default function OnboardingTour() {
           {/* Footer */}
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
             <StepSelector
+              steps={tourSteps}
               currentStep={currentStep}
-              totalSteps={TOUR_STEPS.length}
+              totalSteps={tourSteps.length}
               onSelect={handleStepSelect}
             />
 
@@ -267,14 +267,14 @@ export default function OnboardingTour() {
                   onClick={handlePrev}
                   className="px-3 py-1.5 text-[13px] font-medium text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
                 >
-                  Назад
+                  {t("onboarding.back")}
                 </button>
               )}
               <button
                 onClick={handleNext}
                 className="px-4 py-1.5 text-[13px] font-medium text-white bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg hover:from-violet-600 hover:to-purple-600 transition-colors shadow-lg shadow-purple-500/25"
               >
-                {isLast ? "Готово" : "Далее"}
+                {isLast ? t("onboarding.finish") : t("onboarding.next")}
               </button>
             </div>
           </div>
@@ -288,10 +288,12 @@ export default function OnboardingTour() {
 }
 
 function StepSelector({
+  steps,
   currentStep,
   totalSteps,
   onSelect,
 }: {
+  steps: TourStep[];
   currentStep: number;
   totalSteps: number;
   onSelect: (step: number) => void;
@@ -320,7 +322,7 @@ function StepSelector({
             onClick={() => setOpen(false)}
           />
           <div className="absolute bottom-full left-0 mb-2 z-[102] w-56 py-1.5 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto scrollbar-minimal">
-            {TOUR_STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <button
                 key={i}
                 onClick={() => {

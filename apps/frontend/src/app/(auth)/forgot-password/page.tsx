@@ -20,16 +20,20 @@ import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { useTranslation } from "@/components/providers/language-provider";
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Некорректный email"),
-});
-
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordFormValues = {
+  email: string;
+};
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+  });
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -44,11 +48,11 @@ export default function ForgotPasswordPage() {
     try {
       await api.post("/auth/forgot-password", { email: data.email });
       setIsSuccess(true);
-      toast.success("Инструкции отправлены на ваш email");
+      toast.success(t("auth.instructionsSent"));
     } catch (error: any) {
       // Even if email doesn't exist, show success for security
       setIsSuccess(true);
-      toast.success("Если аккаунт существует, инструкции отправлены на email");
+      toast.success(t("auth.instructionsSentSecure"));
     } finally {
       setIsLoading(false);
     }
@@ -65,16 +69,16 @@ export default function ForgotPasswordPage() {
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Проверьте почту</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{t("auth.checkEmail")}</h2>
           <p className="text-gray-400 mb-6">
-            Если аккаунт с указанным email существует, мы отправили инструкции по восстановлению пароля.
+            {t("auth.checkEmailDesc")}
           </p>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Вернуться к входу
+            {t("auth.backToLogin")}
           </Link>
         </motion.div>
       </div>
@@ -90,7 +94,7 @@ export default function ForgotPasswordPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          Восстановление пароля
+          {t("auth.resetPasswordTitle")}
         </motion.h2>
         <motion.p
           className="text-gray-400"
@@ -98,7 +102,7 @@ export default function ForgotPasswordPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15 }}
         >
-          Введите email для получения инструкций
+          {t("auth.enterEmailForInstructions")}
         </motion.p>
       </div>
 
@@ -146,7 +150,7 @@ export default function ForgotPasswordPage() {
               {isLoading ? (
                 <Icons.spinner className="h-5 w-5 animate-spin" />
               ) : (
-                "Отправить инструкции"
+                t("auth.sendInstructions")
               )}
             </Button>
           </motion.div>
@@ -164,7 +168,7 @@ export default function ForgotPasswordPage() {
           className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Вернуться к входу
+          {t("auth.backToLogin")}
         </Link>
       </motion.div>
     </div>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { analyticsApi, tasksApi } from "@/lib/api";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 import { toast } from "sonner";
 
 interface DashboardStats {
@@ -62,6 +63,7 @@ interface Task {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const { formatCompact, format } = useCurrency();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
@@ -82,7 +84,7 @@ export default function DashboardPage() {
         setError(null);
       } catch (err: any) {
         console.error("Failed to fetch dashboard data:", err);
-        setError(err.response?.data?.message || "Не удалось загрузить данные");
+        setError(err.response?.data?.message || t("dashboard.loadError"));
       } finally {
         setLoading(false);
       }
@@ -91,20 +93,22 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  const locale = language === 'ru' ? 'ru-RU' : 'en-US';
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Доброе утро';
-    if (hour < 18) return 'Добрый день';
-    return 'Добрый вечер';
+    if (hour < 12) return t('dashboard.goodMorning');
+    if (hour < 18) return t('dashboard.goodAfternoon');
+    return t('dashboard.goodEvening');
   };
 
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('ru-RU', {
+    return new Date().toLocaleDateString(locale, {
       weekday: 'long',
       day: 'numeric',
       month: 'long'
@@ -135,7 +139,7 @@ export default function DashboardPage() {
         else newSet.delete(taskId);
         return newSet;
       });
-      toast.error(err.response?.data?.message || "Не удалось обновить задачу");
+      toast.error(err.response?.data?.message || t("dashboard.taskUpdateError"));
     }
   };
 
@@ -153,7 +157,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-violet-500" />
-          <span className="text-gray-400 text-sm">Загрузка...</span>
+          <span className="text-gray-400 text-sm">{t("common.loading")}</span>
         </div>
       </div>
     );
@@ -170,7 +174,7 @@ export default function DashboardPage() {
           onClick={() => window.location.reload()}
           className="px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl font-medium hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-purple-500/25"
         >
-          Попробовать снова
+          {t("common.tryAgain")}
         </button>
       </div>
     );
@@ -201,7 +205,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center">
               <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-white text-xs font-medium">Сделка</span>
+            <span className="text-white text-xs font-medium">{t("dashboard.quickDeal")}</span>
           </button>
 
           <button
@@ -211,7 +215,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
               <Users className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
             </div>
-            <span className="text-gray-300 text-xs font-medium">Контакт</span>
+            <span className="text-gray-300 text-xs font-medium">{t("dashboard.quickContact")}</span>
           </button>
 
           <button
@@ -221,7 +225,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
             </div>
-            <span className="text-gray-300 text-xs font-medium">Задача</span>
+            <span className="text-gray-300 text-xs font-medium">{t("dashboard.quickTask")}</span>
           </button>
 
           <button
@@ -231,7 +235,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-violet-500/20 flex items-center justify-center">
               <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-violet-400" />
             </div>
-            <span className="text-gray-300 text-xs font-medium">Лиды</span>
+            <span className="text-gray-300 text-xs font-medium">{t("dashboard.quickLeads")}</span>
           </button>
         </div>
 
@@ -250,7 +254,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-2xl sm:text-3xl font-bold text-white">{stats.activeDeals}</p>
-              <p className="text-gray-500 text-xs sm:text-sm">Активных сделок</p>
+              <p className="text-gray-500 text-xs sm:text-sm">{t("dashboard.activeDeals")}</p>
             </div>
           </div>
 
@@ -263,7 +267,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-xl sm:text-3xl font-bold text-white">{formatCompact(stats.totalDealsAmount)}</p>
-              <p className="text-gray-500 text-xs sm:text-sm">Сумма сделок</p>
+              <p className="text-gray-500 text-xs sm:text-sm">{t("dashboard.dealsAmount")}</p>
             </div>
           </div>
 
@@ -275,13 +279,13 @@ export default function DashboardPage() {
               </div>
               {stats.highPriorityTasks > 0 && (
                 <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-500/20 text-red-400 text-[10px] sm:text-xs font-medium rounded-full">
-                  {stats.highPriorityTasks} срочных
+                  {t("dashboard.urgent", { count: stats.highPriorityTasks })}
                 </span>
               )}
             </div>
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-2xl sm:text-3xl font-bold text-white">{stats.todayTasks}</p>
-              <p className="text-gray-500 text-xs sm:text-sm">Задач на сегодня</p>
+              <p className="text-gray-500 text-xs sm:text-sm">{t("dashboard.todayTasks")}</p>
             </div>
           </div>
 
@@ -298,7 +302,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-0.5 sm:space-y-1">
               <p className="text-2xl sm:text-3xl font-bold text-white">{stats.totalContacts}</p>
-              <p className="text-gray-500 text-xs sm:text-sm">Контактов</p>
+              <p className="text-gray-500 text-xs sm:text-sm">{t("dashboard.contacts")}</p>
             </div>
           </div>
         </div>
@@ -313,13 +317,13 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25">
                   <CheckCircle2 className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="font-semibold text-white">Мои задачи</h3>
+                <h3 className="font-semibold text-white">{t("dashboard.myTasks")}</h3>
               </div>
               <button
                 onClick={() => router.push('/tasks')}
                 className="text-violet-400 text-sm font-medium hover:text-violet-300 flex items-center gap-1"
               >
-                Все <ChevronRight className="w-4 h-4" />
+                {t("common.all")} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -372,7 +376,7 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
                     <Sparkles className="w-6 h-6 text-gray-500" />
                   </div>
-                  <p className="text-gray-500 text-sm">Нет задач на сегодня</p>
+                  <p className="text-gray-500 text-sm">{t("dashboard.noTasksToday")}</p>
                 </div>
               )}
             </div>
@@ -385,13 +389,13 @@ export default function DashboardPage() {
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/25">
                   <Target className="w-4 h-4 text-white" />
                 </div>
-                <h3 className="font-semibold text-white">Воронка продаж</h3>
+                <h3 className="font-semibold text-white">{t("dashboard.salesFunnel")}</h3>
               </div>
               <button
                 onClick={() => router.push('/deals')}
                 className="text-violet-400 text-sm font-medium hover:text-violet-300 flex items-center gap-1"
               >
-                Сделки <ChevronRight className="w-4 h-4" />
+                {t("nav.deals")} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -434,7 +438,7 @@ export default function DashboardPage() {
 
               {stats.funnel.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 text-sm">Нет данных о воронке</p>
+                  <p className="text-gray-500 text-sm">{t("dashboard.noFunnelData")}</p>
                 </div>
               )}
             </div>
@@ -445,9 +449,9 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CircleDot className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-500">Всего в воронке</span>
+                    <span className="text-sm text-gray-500">{t("dashboard.totalInFunnel")}</span>
                   </div>
-                  <span className="text-lg font-bold text-white">{funnelTotal} сделок</span>
+                  <span className="text-lg font-bold text-white">{t("dashboard.dealsCount", { count: funnelTotal })}</span>
                 </div>
               </div>
             )}
@@ -461,13 +465,13 @@ export default function DashboardPage() {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
                 <Bell className="w-4 h-4 text-white" />
               </div>
-              <h3 className="font-semibold text-white">Последние действия</h3>
+              <h3 className="font-semibold text-white">{t("dashboard.recentActivity")}</h3>
             </div>
             <button
               onClick={() => router.push('/analytics')}
               className="text-violet-400 text-sm font-medium hover:text-violet-300 flex items-center gap-1"
             >
-              История <ChevronRight className="w-4 h-4" />
+              {t("dashboard.history")} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
@@ -494,9 +498,9 @@ export default function DashboardPage() {
                   const diffMins = Math.floor(diffMs / 60000);
                   const diffHours = Math.floor(diffMs / 3600000);
 
-                  if (diffMins < 60) return `${diffMins} мин`;
-                  if (diffHours < 24) return `${diffHours} ч`;
-                  return `${Math.floor(diffHours / 24)} д`;
+                  if (diffMins < 60) return t('dashboard.min', { count: diffMins });
+                  if (diffHours < 24) return t('dashboard.hour', { count: diffHours });
+                  return t('dashboard.day', { count: Math.floor(diffHours / 24) });
                 };
 
                 return (
@@ -509,14 +513,14 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-300 line-clamp-2">{activity.description}</p>
-                      <p className="text-xs text-gray-600 mt-1">{timeAgo(activity.createdAt)} назад</p>
+                      <p className="text-xs text-gray-600 mt-1">{t('dashboard.ago', { time: timeAgo(activity.createdAt) })}</p>
                     </div>
                   </div>
                 );
               })
             ) : (
               <div className="col-span-full text-center py-8">
-                <p className="text-gray-500 text-sm">Нет активности</p>
+                <p className="text-gray-500 text-sm">{t("dashboard.noActivity")}</p>
               </div>
             )}
           </div>

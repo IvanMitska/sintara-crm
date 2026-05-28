@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { messagesApi } from "@/lib/api";
+import { useTranslation } from "@/components/providers/language-provider";
 
 // Channel icons
 const WhatsAppIcon = () => (
@@ -89,13 +90,20 @@ interface Message {
 }
 
 const channelConfig: Record<string, { name: string; icon: React.ComponentType<any>; color: string }> = {
-  all: { name: "Все", icon: MessageSquare, color: "bg-gray-500" },
+  all: { name: "All", icon: MessageSquare, color: "bg-gray-500" },
   whatsapp: { name: "WhatsApp", icon: WhatsAppIcon, color: "bg-green-500" },
   telegram: { name: "Telegram", icon: TelegramIcon, color: "bg-blue-500" },
   instagram: { name: "Instagram", icon: InstagramIcon, color: "bg-gradient-to-br from-purple-500 to-pink-500" },
   email: { name: "Email", icon: Mail, color: "bg-red-500" },
-  phone: { name: "Звонки", icon: PhoneCall, color: "bg-amber-500" },
+  phone: { name: "Calls", icon: PhoneCall, color: "bg-amber-500" },
   sms: { name: "SMS", icon: MessageSquare, color: "bg-teal-500" },
+};
+
+// Localized labels for channels that are not brand names.
+const getChannelLabel = (channelId: string, t: (key: string) => string) => {
+  if (channelId === "all") return t("common.all");
+  if (channelId === "phone") return t("messages.channelCalls");
+  return channelConfig[channelId]?.name || channelId;
 };
 
 const getChannelColor = (channelId: string) => {
@@ -113,28 +121,30 @@ const getInitials = (firstName: string, lastName: string) => {
   return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?';
 };
 
-const formatTime = (dateStr: string) => {
+const formatTime = (dateStr: string, t: (key: string) => string, locale: string) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
   if (days === 0) {
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   } else if (days === 1) {
-    return 'Вчера';
+    return t("messages.yesterday");
   } else if (days < 7) {
-    return date.toLocaleDateString('ru-RU', { weekday: 'short' });
+    return date.toLocaleDateString(locale, { weekday: 'short' });
   } else {
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   }
 };
 
-const formatMessageTime = (dateStr: string) => {
-  return new Date(dateStr).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const formatMessageTime = (dateStr: string, locale: string) => {
+  return new Date(dateStr).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 };
 
 export default function MessagesPage() {
+  const { t, language } = useTranslation();
+  const locale = language === "ru" ? "ru-RU" : "en-US";
   const searchParams = useSearchParams();
   const urlContactId = searchParams.get("contactId");
   const [channels, setChannels] = useState<ChannelStat[]>([]);
@@ -287,7 +297,7 @@ export default function MessagesPage() {
               )}>
                 {typeof Icon === 'function' && Icon.length === 0 ? <Icon /> : <Icon className="w-5 h-5" />}
               </div>
-              <span className="text-[10px] font-medium">{config.name}</span>
+              <span className="text-[10px] font-medium">{getChannelLabel(channel.channel, t)}</span>
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
                   {unreadCount > 99 ? "99+" : unreadCount}
@@ -307,7 +317,7 @@ export default function MessagesPage() {
         {/* Header */}
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-white">Сообщения</h2>
+            <h2 className="text-lg font-bold text-white">{t("messages.title")}</h2>
             <button
               onClick={fetchConversations}
               className="p-2 hover:bg-white/5 rounded-lg"
@@ -320,7 +330,7 @@ export default function MessagesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Поиск диалогов..."
+              placeholder={t("messages.searchChats")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 text-white placeholder-gray-400"
@@ -339,7 +349,7 @@ export default function MessagesPage() {
               {pinnedConversations.length > 0 && (
                 <>
                   <div className="px-4 py-2">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Закреплённые</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("messages.pinned")}</span>
                   </div>
                   {pinnedConversations.map((conv) => (
                     <ConversationItem
@@ -355,7 +365,7 @@ export default function MessagesPage() {
               {otherConversations.length > 0 && (
                 <>
                   <div className="px-4 py-2">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Все диалоги</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("messages.allChats")}</span>
                   </div>
                   {otherConversations.map((conv) => (
                     <ConversationItem
@@ -371,8 +381,8 @@ export default function MessagesPage() {
               {conversations.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                   <MessageSquare className="w-12 h-12 mb-3 text-gray-500" />
-                  <p className="text-sm font-medium">Диалоги не найдены</p>
-                  <p className="text-xs text-gray-500 mt-1">Создайте контакт и отправьте сообщение</p>
+                  <p className="text-sm font-medium">{t("messages.noChats")}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t("messages.noChatsHint")}</p>
                 </div>
               )}
             </>
@@ -412,7 +422,7 @@ export default function MessagesPage() {
                   {selectedConv.contact.firstName} {selectedConv.contact.lastName}
                 </h3>
                 <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-400">
-                  <span>{selectedConv.contact.phone || selectedConv.contact.email || 'Нет контактов'}</span>
+                  <span>{selectedConv.contact.phone || selectedConv.contact.email || t("messages.noContactDetails")}</span>
                 </div>
               </div>
             </div>
@@ -444,15 +454,15 @@ export default function MessagesPage() {
                 {currentMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                     <MessageSquare className="w-12 h-12 mb-3 text-gray-500" />
-                    <p className="text-sm font-medium">Нет сообщений</p>
-                    <p className="text-xs text-gray-500 mt-1">Начните диалог</p>
+                    <p className="text-sm font-medium">{t("messages.noMessages")}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t("messages.startConversation")}</p>
                   </div>
                 ) : (
                   <>
                     {/* Date separator */}
                     <div className="flex items-center justify-center">
                       <span className="px-3 py-1 bg-white/10 rounded-full text-xs text-gray-400 shadow-sm">
-                        Сегодня
+                        {t("messages.today")}
                       </span>
                     </div>
 
@@ -491,7 +501,7 @@ export default function MessagesPage() {
                               "flex items-center justify-end gap-1 mt-1",
                               isMe ? "text-violet-200" : "text-gray-400"
                             )}>
-                              <span className="text-[10px]">{formatMessageTime(msg.createdAt)}</span>
+                              <span className="text-[10px]">{formatMessageTime(msg.createdAt, locale)}</span>
                               {isMe && (
                                 msg.isRead
                                   ? <CheckCheck className="w-3.5 h-3.5" />
@@ -523,7 +533,7 @@ export default function MessagesPage() {
 
               <div className="flex-1 relative">
                 <textarea
-                  placeholder="Введите сообщение..."
+                  placeholder={t("messages.typeMessage")}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -570,8 +580,8 @@ export default function MessagesPage() {
             <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-10 h-10 text-gray-500" />
             </div>
-            <p className="text-lg font-semibold text-gray-300">Выберите диалог</p>
-            <p className="text-sm text-gray-400 mt-1">Чтобы начать общение</p>
+            <p className="text-lg font-semibold text-gray-300">{t("messages.selectChatTitle")}</p>
+            <p className="text-sm text-gray-400 mt-1">{t("messages.selectChatHint")}</p>
           </div>
         </div>
       )}
@@ -588,6 +598,8 @@ function ConversationItem({
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const { t, language } = useTranslation();
+  const locale = language === "ru" ? "ru-RU" : "en-US";
   const initials = getInitials(conversation.contact.firstName, conversation.contact.lastName);
 
   return (
@@ -626,11 +638,11 @@ function ConversationItem({
             </span>
           </div>
           <span className="text-xs text-gray-400 shrink-0">
-            {conversation.lastMessage ? formatTime(conversation.lastMessage.createdAt) : ''}
+            {conversation.lastMessage ? formatTime(conversation.lastMessage.createdAt, t, locale) : ''}
           </span>
         </div>
         <p className="text-sm text-gray-400 truncate">
-          {conversation.lastMessage?.content || 'Нет сообщений'}
+          {conversation.lastMessage?.content || t("messages.noMessages")}
         </p>
       </div>
 

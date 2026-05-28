@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -21,12 +22,16 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmText = "Подтвердить",
-  cancelText = "Отмена",
+  confirmText,
+  cancelText,
   variant = "danger",
   isLoading = false,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
+
+  const resolvedConfirmText = confirmText ?? t("common.confirm");
+  const resolvedCancelText = cancelText ?? t("common.cancel");
 
   const variantStyles = {
     danger: {
@@ -81,7 +86,7 @@ export function ConfirmDialog({
               disabled={isLoading}
               className="px-5 py-2.5 text-gray-300 font-medium rounded-xl hover:bg-white/10  disabled:opacity-50"
             >
-              {cancelText}
+              {resolvedCancelText}
             </button>
             <button
               onClick={onConfirm}
@@ -92,7 +97,7 @@ export function ConfirmDialog({
               )}
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {confirmText}
+              {resolvedConfirmText}
             </button>
           </div>
         </div>

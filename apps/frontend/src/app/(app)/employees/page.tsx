@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { organizationsApi, invitationsApi } from "@/lib/api";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface OrgMember {
   id: string;
@@ -66,14 +67,16 @@ interface Employee {
   updatedAt?: string;
 }
 
-const roleConfig: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
-  OWNER: { label: "Владелец", color: "text-yellow-400", bgColor: "bg-yellow-500/20", icon: Crown },
-  ADMIN: { label: "Администратор", color: "text-red-400", bgColor: "bg-red-500/20", icon: ShieldCheck },
-  MANAGER: { label: "Менеджер", color: "text-violet-400", bgColor: "bg-violet-500/20", icon: BadgeCheck },
-  OPERATOR: { label: "Оператор", color: "text-green-400", bgColor: "bg-green-500/20", icon: Shield },
+const roleConfig: Record<string, { roleKey: string; color: string; bgColor: string; icon: any }> = {
+  OWNER: { roleKey: "roles.owner", color: "text-yellow-400", bgColor: "bg-yellow-500/20", icon: Crown },
+  ADMIN: { roleKey: "roles.admin", color: "text-red-400", bgColor: "bg-red-500/20", icon: ShieldCheck },
+  MANAGER: { roleKey: "roles.manager", color: "text-violet-400", bgColor: "bg-violet-500/20", icon: BadgeCheck },
+  OPERATOR: { roleKey: "roles.operator", color: "text-green-400", bgColor: "bg-green-500/20", icon: Shield },
 };
 
 export default function EmployeesPage() {
+  const { t, language } = useTranslation();
+  const locale = language === 'ru' ? 'ru-RU' : 'en-US';
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -122,7 +125,7 @@ export default function EmployeesPage() {
       // Online status tracking can be added later if needed
       setOnlineUserIds(new Set());
     } catch (err: any) {
-      setError(err.response?.data?.message || "Ошибка загрузки сотрудников");
+      setError(err.response?.data?.message || "__loadError");
       setEmployees([]);
     } finally {
       setLoading(false);
@@ -153,7 +156,7 @@ export default function EmployeesPage() {
       ));
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Ошибка изменения статуса");
+      alert(err.response?.data?.message || t("employees.statusChangeError"));
     }
   };
 
@@ -166,7 +169,7 @@ export default function EmployeesPage() {
       setRoleChangeEmployee(null);
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Ошибка изменения роли");
+      alert(err.response?.data?.message || t("employees.roleChangeError"));
     }
   };
 
@@ -178,7 +181,7 @@ export default function EmployeesPage() {
       setSelectedEmployee(null);
       setOpenDropdown(null);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Ошибка удаления сотрудника");
+      alert(err.response?.data?.message || t("employees.removeError"));
     }
   };
 
@@ -187,12 +190,12 @@ export default function EmployeesPage() {
     try {
       setInviting(true);
       const response = await invitationsApi.create({ email: inviteEmail, role: inviteRole });
-      alert(`Приглашение отправлено!\n\nСсылка для регистрации:\n${response.data.inviteUrl}`);
+      alert(`${t("employees.inviteSent")}\n\n${t("employees.inviteLink")}\n${response.data.inviteUrl}`);
       setShowInviteModal(false);
       setInviteEmail("");
       setInviteRole("OPERATOR");
     } catch (err: any) {
-      alert(err.response?.data?.message || "Ошибка отправки приглашения");
+      alert(err.response?.data?.message || t("employees.inviteError"));
     } finally {
       setInviting(false);
     }
@@ -258,7 +261,7 @@ export default function EmployeesPage() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("ru-RU", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -268,7 +271,7 @@ export default function EmployeesPage() {
   };
 
   const formatShortDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ru-RU", {
+    return new Date(dateString).toLocaleDateString(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -288,7 +291,7 @@ export default function EmployeesPage() {
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-          <p className="text-gray-400">Загрузка сотрудников...</p>
+          <p className="text-gray-400">{t("employees.loadingEmployees")}</p>
         </div>
       </div>
     );
@@ -301,13 +304,13 @@ export default function EmployeesPage() {
           <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
             <X className="w-8 h-8 text-red-500" />
           </div>
-          <p className="text-red-400">{error}</p>
+          <p className="text-red-400">{error === "__loadError" ? t("employees.loadError") : error}</p>
           <button
             onClick={fetchEmployees}
             className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-purple-500"
           >
             <RefreshCw className="w-4 h-4" />
-            Повторить
+            {t("common.tryAgain")}
           </button>
         </div>
       </div>
@@ -320,28 +323,28 @@ export default function EmployeesPage() {
       <div className="px-6 py-4 glass-card border-b border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <h1 className="text-2xl font-bold text-white">Сотрудники</h1>
+            <h1 className="text-2xl font-bold text-white">{t("employees.title")}</h1>
 
             {/* Stats Pills */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
                 <Users className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm text-gray-400">{t("employees.statTotal")}</span>
                 <span className="text-sm font-bold text-white">{totalEmployees}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm text-green-400">Онлайн</span>
+                <span className="text-sm text-green-400">{t("employees.statOnline")}</span>
                 <span className="text-sm font-bold text-green-400">{onlineCount}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 rounded-lg">
                 <Shield className="w-4 h-4 text-violet-400" />
-                <span className="text-sm text-violet-400">Активных</span>
+                <span className="text-sm text-violet-400">{t("employees.statActive")}</span>
                 <span className="text-sm font-bold text-violet-400">{activeEmployees}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 rounded-lg">
                 <Crown className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm text-yellow-400">Админов</span>
+                <span className="text-sm text-yellow-400">{t("employees.statAdmins")}</span>
                 <span className="text-sm font-bold text-yellow-400">{adminsAndOwners}</span>
               </div>
             </div>
@@ -353,7 +356,7 @@ export default function EmployeesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск сотрудника..."
+                placeholder={t("employees.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-72 pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-400"
@@ -366,11 +369,11 @@ export default function EmployeesPage() {
               onChange={(e) => setFilterRole(e.target.value)}
               className="px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10"
             >
-              <option value="all">Все роли</option>
-              <option value="OWNER">Владельцы</option>
-              <option value="ADMIN">Администраторы</option>
-              <option value="MANAGER">Менеджеры</option>
-              <option value="OPERATOR">Операторы</option>
+              <option value="all">{t("employees.allRoles")}</option>
+              <option value="OWNER">{t("employees.ownersPlural")}</option>
+              <option value="ADMIN">{t("employees.adminsPlural")}</option>
+              <option value="MANAGER">{t("employees.managersPlural")}</option>
+              <option value="OPERATOR">{t("employees.operatorsPlural")}</option>
             </select>
 
             {/* View Toggle */}
@@ -418,7 +421,7 @@ export default function EmployeesPage() {
               className="flex items-center gap-2 px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-500 shadow-sm"
             >
               <UserPlus className="w-5 h-5" />
-              Пригласить
+              {t("employees.inviteShort")}
             </button>
           </div>
         </div>
@@ -455,7 +458,7 @@ export default function EmployeesPage() {
                   onClick={() => handleSort("lastName")}
                   className="flex-1 min-w-[220px] flex items-center gap-2 px-4 h-full hover:bg-white/5 text-left border-r border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Сотрудник</span>
+                  <span className="font-semibold text-gray-300">{t("employees.colEmployee")}</span>
                   {sortField === "lastName" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
@@ -465,32 +468,32 @@ export default function EmployeesPage() {
                   onClick={() => handleSort("role")}
                   className="w-[150px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-r border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Роль</span>
+                  <span className="font-semibold text-gray-300">{t("employees.role")}</span>
                   {sortField === "role" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 <div className="w-[200px] flex items-center px-4 h-full border-r border-white/5">
-                  <span className="font-semibold text-gray-300">E-Mail</span>
+                  <span className="font-semibold text-gray-300">{t("common.email")}</span>
                 </div>
 
                 <div className="w-[150px] flex items-center px-4 h-full border-r border-white/5">
-                  <span className="font-semibold text-gray-300">Телефон</span>
+                  <span className="font-semibold text-gray-300">{t("common.phone")}</span>
                 </div>
 
                 <button
                   onClick={() => handleSort("lastActivity")}
                   className="w-[170px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-r border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Последний вход</span>
+                  <span className="font-semibold text-gray-300">{t("employees.lastLogin")}</span>
                   {sortField === "lastActivity" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 <div className="w-[100px] flex items-center px-4 h-full">
-                  <span className="font-semibold text-gray-300">Статус</span>
+                  <span className="font-semibold text-gray-300">{t("common.status")}</span>
                 </div>
               </div>
             </div>
@@ -547,21 +550,21 @@ export default function EmployeesPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
-                            Просмотреть профиль
+                            {t("employees.viewProfile")}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setRoleChangeEmployee(employee); setOpenDropdown(null); }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <UserCog className="w-4 h-4 text-gray-400" />
-                            Изменить роль
+                            {t("employees.changeRole")}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleToggleActive(employee); }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Shield className="w-4 h-4 text-gray-400" />
-                            {employee.isActive ? "Деактивировать" : "Активировать"}
+                            {employee.isActive ? t("employees.deactivate") : t("employees.activate")}
                           </button>
                           <div className="border-t border-white/5 my-1" />
                           <button
@@ -569,7 +572,7 @@ export default function EmployeesPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" />
-                            Удалить
+                            {t("common.delete")}
                           </button>
                         </div>
                       )}
@@ -599,7 +602,7 @@ export default function EmployeesPage() {
                             {employee.firstName} {employee.lastName}
                           </p>
                           <p className={cn("text-xs font-medium", role.color)}>
-                            {role.label}
+                            {t(role.roleKey)}
                           </p>
                         </div>
                       </div>
@@ -608,7 +611,7 @@ export default function EmployeesPage() {
                     {/* Role */}
                     <div className="w-[150px] px-4 border-r border-white/5">
                       <span className={cn("px-2.5 py-1 rounded-lg text-xs font-medium", role.bgColor, role.color)}>
-                        {role.label}
+                        {t(role.roleKey)}
                       </span>
                     </div>
 
@@ -637,11 +640,11 @@ export default function EmployeesPage() {
                     <div className="w-[100px] px-4">
                       {employee.isActive ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium">
-                          Активен
+                          {t("employees.statusActive")}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-500/20 text-gray-400 rounded-lg text-xs font-medium">
-                          Неактивен
+                          {t("employees.statusInactive")}
                         </span>
                       )}
                     </div>
@@ -654,7 +657,7 @@ export default function EmployeesPage() {
                   <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                     <Users className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-400 font-medium">Сотрудники не найдены</p>
+                  <p className="text-gray-400 font-medium">{t("employees.notFound")}</p>
                 </div>
               )}
             </div>
@@ -663,16 +666,16 @@ export default function EmployeesPage() {
             <div className="glass-card border-t border-white/5 px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <span className="text-sm text-gray-400">
-                  <span className="font-medium">ОТМЕЧЕНО:</span> {selectedEmployees.size} / {filteredEmployees.length}
+                  <span className="font-medium">{t("employees.marked")}:</span> {selectedEmployees.size} / {filteredEmployees.length}
                 </span>
                 <span className="text-sm text-gray-400">
-                  <span className="font-medium">ВСЕГО:</span> {totalEmployees}
+                  <span className="font-medium">{t("employees.totalLabel")}:</span> {totalEmployees}
                 </span>
               </div>
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">НА СТРАНИЦЕ:</span>
+                  <span className="text-sm text-gray-400">{t("employees.perPage")}:</span>
                   <select
                     value={perPage}
                     onChange={(e) => setPerPage(Number(e.target.value))}
@@ -691,11 +694,11 @@ export default function EmployeesPage() {
             {selectedEmployees.size > 0 && (
               <div className="bg-violet-500 text-white px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <span className="font-medium">Выбрано: {selectedEmployees.size}</span>
+                  <span className="font-medium">{t("common.selected", { count: selectedEmployees.size })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button className="px-4 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
-                    Экспорт
+                    {t("common.export")}
                   </button>
                 </div>
               </div>
@@ -736,19 +739,19 @@ export default function EmployeesPage() {
                       <p className="font-semibold text-white text-center">
                         {employee.firstName} {employee.lastName}
                       </p>
-                      <p className="text-xs text-gray-400 text-center">{role.label}</p>
+                      <p className="text-xs text-gray-400 text-center">{t(role.roleKey)}</p>
                     </div>
 
                     <div className="flex items-center justify-center gap-2 mb-4">
                       <span className={cn("px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1", role.bgColor, role.color)}>
                         <RoleIcon className="w-3.5 h-3.5" />
-                        {role.label}
+                        {t(role.roleKey)}
                       </span>
                       <span className={cn(
                         "px-2.5 py-1 rounded-lg text-xs font-medium",
                         employee.isActive ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"
                       )}>
-                        {employee.isActive ? "Активен" : "Неактивен"}
+                        {employee.isActive ? t("employees.statusActive") : t("employees.statusInactive")}
                       </span>
                     </div>
 
@@ -773,7 +776,7 @@ export default function EmployeesPage() {
                       {isOnline && (
                         <span className="flex items-center gap-1 text-green-400">
                           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                          Онлайн
+                          {t("employees.statOnline")}
                         </span>
                       )}
                     </div>
@@ -813,13 +816,13 @@ export default function EmployeesPage() {
               {/* Tabs */}
               <div className="flex items-center gap-1 px-6 py-2 border-b border-white/5 bg-white/[0.02]">
                 <button className="px-4 py-2 text-sm font-medium text-violet-400 bg-white/10 rounded-lg shadow-sm">
-                  Профиль
+                  {t("employees.tabProfile")}
                 </button>
                 <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 rounded-lg">
-                  Задачи
+                  {t("employees.tabTasks")}
                 </button>
                 <button className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 rounded-lg">
-                  Активность
+                  {t("employees.tabActivity")}
                 </button>
               </div>
 
@@ -853,7 +856,7 @@ export default function EmployeesPage() {
                           "w-1.5 h-1.5 rounded-full",
                           onlineUserIds.has(selectedEmployee.id) ? "bg-white animate-pulse" : "bg-white/60"
                         )} />
-                        {onlineUserIds.has(selectedEmployee.id) ? "В сети" : "Не в сети"}
+                        {onlineUserIds.has(selectedEmployee.id) ? t("messages.online") : t("messages.offline")}
                       </div>
                     </div>
 
@@ -863,28 +866,28 @@ export default function EmployeesPage() {
                       roleConfig[selectedEmployee.role].bgColor,
                       roleConfig[selectedEmployee.role].color
                     )}>
-                      {roleConfig[selectedEmployee.role].label}
+                      {t(roleConfig[selectedEmployee.role].roleKey)}
                     </div>
                   </div>
 
                   {/* Right Column - Contact Info */}
                   <div className="flex-1 min-w-0">
                     <div className="bg-white/5 rounded-xl p-4">
-                      <h4 className="text-sm font-semibold text-white mb-4">Контактная информация</h4>
+                      <h4 className="text-sm font-semibold text-white mb-4">{t("employees.contactInfo")}</h4>
 
                       <div className="space-y-4">
                         <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Имя</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{t("employees.firstName")}</p>
                           <p className="text-sm text-white">{selectedEmployee.firstName}</p>
                         </div>
 
                         <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Фамилия</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{t("employees.lastName")}</p>
                           <p className="text-sm text-white">{selectedEmployee.lastName}</p>
                         </div>
 
                         <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Почта</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{t("common.email")}</p>
                           <a href={`mailto:${selectedEmployee.email}`} className="text-sm text-violet-400 hover:underline">
                             {selectedEmployee.email}
                           </a>
@@ -892,23 +895,23 @@ export default function EmployeesPage() {
 
                         {selectedEmployee.phone && (
                           <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Телефон</p>
+                            <p className="text-xs text-gray-400 mb-0.5">{t("common.phone")}</p>
                             <p className="text-sm text-white">{selectedEmployee.phone}</p>
                           </div>
                         )}
 
                         <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Роль</p>
-                          <p className="text-sm text-white">{roleConfig[selectedEmployee.role].label}</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{t("employees.role")}</p>
+                          <p className="text-sm text-white">{t(roleConfig[selectedEmployee.role].roleKey)}</p>
                         </div>
 
                         <div>
-                          <p className="text-xs text-gray-400 mb-0.5">Статус</p>
+                          <p className="text-xs text-gray-400 mb-0.5">{t("common.status")}</p>
                           <p className={cn(
                             "text-sm",
                             selectedEmployee.isActive ? "text-green-400" : "text-gray-400"
                           )}>
-                            {selectedEmployee.isActive ? "Активен" : "Неактивен"}
+                            {selectedEmployee.isActive ? t("employees.statusActive") : t("employees.statusInactive")}
                           </p>
                         </div>
                       </div>
@@ -919,14 +922,14 @@ export default function EmployeesPage() {
                 {/* Activity section */}
                 <div className="px-6 pb-6 space-y-4">
                   <div className="bg-white/5 rounded-xl p-4">
-                    <h4 className="text-sm font-semibold text-white mb-3">Активность</h4>
+                    <h4 className="text-sm font-semibold text-white mb-3">{t("employees.tabActivity")}</h4>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Последний вход</span>
+                        <span className="text-xs text-gray-400">{t("employees.lastLogin")}</span>
                         <span className="text-sm text-white">{formatDate(selectedEmployee.lastLoginAt)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Зарегистрирован</span>
+                        <span className="text-xs text-gray-400">{t("employees.registeredAt")}</span>
                         <span className="text-sm text-white">{formatShortDate(selectedEmployee.createdAt)}</span>
                       </div>
                     </div>
@@ -942,7 +945,7 @@ export default function EmployeesPage() {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 text-white rounded-lg font-medium hover:bg-purple-500"
                   >
                     <UserCog className="w-4 h-4" />
-                    Изменить роль
+                    {t("employees.changeRole")}
                   </button>
                   <button
                     onClick={() => handleToggleActive(selectedEmployee)}
@@ -972,7 +975,7 @@ export default function EmployeesPage() {
             <div className="fixed inset-0 flex items-center justify-center z-[70] p-4">
               <div className="w-full max-w-md glass-card rounded-2xl shadow-2xl border border-white/10">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                  <h3 className="text-lg font-semibold text-white">Пригласить сотрудника</h3>
+                  <h3 className="text-lg font-semibold text-white">{t("employees.invite")}</h3>
                   <button
                     onClick={() => setShowInviteModal(false)}
                     className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg"
@@ -982,7 +985,7 @@ export default function EmployeesPage() {
                 </div>
                 <div className="p-6 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t("common.email")}</label>
                     <input
                       type="email"
                       value={inviteEmail}
@@ -992,15 +995,15 @@ export default function EmployeesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Роль</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">{t("employees.role")}</label>
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
                       className="w-full px-4 py-3 bg-white/5 rounded-xl text-white border-0 focus:ring-2 focus:ring-violet-500"
                     >
-                      <option value="OPERATOR">Оператор</option>
-                      <option value="MANAGER">Менеджер</option>
-                      <option value="ADMIN">Администратор</option>
+                      <option value="OPERATOR">{t("roles.operator")}</option>
+                      <option value="MANAGER">{t("roles.manager")}</option>
+                      <option value="ADMIN">{t("roles.admin")}</option>
                     </select>
                   </div>
                 </div>
@@ -1009,7 +1012,7 @@ export default function EmployeesPage() {
                     onClick={() => setShowInviteModal(false)}
                     className="flex-1 px-4 py-2.5 text-gray-400 bg-white/5 rounded-lg font-medium hover:bg-white/10"
                   >
-                    Отмена
+                    {t("common.cancel")}
                   </button>
                   <button
                     onClick={handleInvite}
@@ -1017,7 +1020,7 @@ export default function EmployeesPage() {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 text-white rounded-lg font-medium hover:bg-purple-500 disabled:opacity-50"
                   >
                     {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                    Отправить
+                    {t("messages.send")}
                   </button>
                 </div>
               </div>
@@ -1035,7 +1038,7 @@ export default function EmployeesPage() {
             <div className="fixed inset-0 flex items-center justify-center z-[90] p-4">
               <div className="w-full max-w-md glass-card rounded-2xl shadow-2xl border border-white/10">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                  <h3 className="text-lg font-semibold text-white">Изменить роль</h3>
+                  <h3 className="text-lg font-semibold text-white">{t("employees.changeRole")}</h3>
                   <button
                     onClick={() => setRoleChangeEmployee(null)}
                     className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg"
@@ -1045,11 +1048,11 @@ export default function EmployeesPage() {
                 </div>
                 <div className="p-6">
                   <p className="text-sm text-gray-400 mb-4">
-                    Изменить роль для {roleChangeEmployee.firstName} {roleChangeEmployee.lastName}
+                    {t("employees.changeRoleFor", { name: `${roleChangeEmployee.firstName} ${roleChangeEmployee.lastName}` })}
                   </p>
                   {roleChangeEmployee.role === "OWNER" ? (
                     <p className="text-sm text-yellow-400">
-                      Роль владельца нельзя изменить. Владелец может передать права только через настройки организации.
+                      {t("employees.ownerRoleLocked")}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -1067,9 +1070,9 @@ export default function EmployeesPage() {
                             )}
                           >
                             <config.icon className={cn("w-5 h-5", config.color)} />
-                            <span className="text-white font-medium">{config.label}</span>
+                            <span className="text-white font-medium">{t(config.roleKey)}</span>
                             {roleChangeEmployee.role === key && (
-                              <span className="ml-auto text-xs text-violet-400">Текущая</span>
+                              <span className="ml-auto text-xs text-violet-400">{t("employees.currentRole")}</span>
                             )}
                           </button>
                         ))}
@@ -1087,10 +1090,10 @@ export default function EmployeesPage() {
             isOpen={true}
             onClose={() => setConfirmDelete(null)}
             onConfirm={() => handleDelete(confirmDelete)}
-            title="Удалить сотрудника?"
-            description={`Вы уверены, что хотите удалить ${confirmDelete.firstName} ${confirmDelete.lastName}? Это действие нельзя отменить.`}
-            confirmText="Удалить"
-            cancelText="Отмена"
+            title={t("employees.deleteConfirm")}
+            description={t("employees.deleteConfirmDesc", { name: `${confirmDelete.firstName} ${confirmDelete.lastName}` })}
+            confirmText={t("common.delete")}
+            cancelText={t("common.cancel")}
             variant="danger"
           />
         )}
