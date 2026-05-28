@@ -185,6 +185,7 @@ model User {
   middleName       String?
   phone            String?
   avatar           String?
+  language         String    @default("ru") // ru, en
   role             UserRole  @default(OPERATOR)
   isActive         Boolean   @default(true)
   twoFactorEnabled Boolean   @default(false)

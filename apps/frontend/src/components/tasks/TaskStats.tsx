@@ -10,6 +10,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { TaskStats as TaskStatsType } from "./types";
 
 interface TaskStatsProps {
@@ -18,44 +19,45 @@ interface TaskStatsProps {
 }
 
 export function TaskStats({ stats, className }: TaskStatsProps) {
+  const { t } = useTranslation();
   const completionRate = stats.total > 0
     ? Math.round((stats.completed / stats.total) * 100)
     : 0;
 
   const statItems = [
     {
-      label: "Всего",
+      label: t("tasks.statTotal"),
       value: stats.total,
       icon: ListTodo,
       accentColor: "bg-gray-400",
     },
     {
-      label: "В работе",
+      label: t("tasks.statusInProgress"),
       value: stats.inProgress,
       icon: PlayCircle,
       accentColor: "bg-violet-500",
     },
     {
-      label: "Выполнено",
+      label: t("tasks.statusCompleted"),
       value: stats.completed,
       icon: CheckCircle2,
       accentColor: "bg-emerald-500",
     },
     {
-      label: "Просрочено",
+      label: t("tasks.overdueShort"),
       value: stats.overdue,
       icon: AlertTriangle,
       accentColor: "bg-red-500",
       highlight: stats.overdue > 0,
     },
     {
-      label: "Сегодня",
+      label: t("tasks.today"),
       value: stats.dueToday,
       icon: Clock,
       accentColor: "bg-amber-500",
     },
     {
-      label: "На неделю",
+      label: t("tasks.statThisWeek"),
       value: stats.dueThisWeek,
       icon: Calendar,
       accentColor: "bg-purple-500",
@@ -97,7 +99,7 @@ export function TaskStats({ stats, className }: TaskStatsProps) {
           <div className="flex items-center gap-2.5">
             <TrendingUp className="h-4 w-4 text-gray-500" />
             <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-              Прогресс выполнения
+              {t("tasks.completionProgress")}
             </span>
           </div>
           <span className="text-2xl font-bold text-white tracking-tight">
@@ -113,11 +115,11 @@ export function TaskStats({ stats, className }: TaskStatsProps) {
         <div className="flex justify-between mt-3 text-xs text-gray-500">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            {stats.completed} выполнено
+            {t("tasks.completedCount", { count: stats.completed })}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-gray-500" />
-            {stats.pending} ожидает
+            {t("tasks.pendingCount", { count: stats.pending })}
           </span>
         </div>
       </div>
@@ -126,6 +128,7 @@ export function TaskStats({ stats, className }: TaskStatsProps) {
 }
 
 export function TaskStatsCompact({ stats }: TaskStatsProps) {
+  const { t } = useTranslation();
   const completionRate = stats.total > 0
     ? Math.round((stats.completed / stats.total) * 100)
     : 0;
@@ -133,23 +136,23 @@ export function TaskStatsCompact({ stats }: TaskStatsProps) {
   return (
     <div className="flex items-center gap-6 text-sm">
       <div className="flex items-center gap-2">
-        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">Всего:</span>
+        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">{t("tasks.statTotalLabel")}</span>
         <span className="font-semibold text-white">{stats.total}</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-emerald-500" />
-        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">Готово:</span>
+        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">{t("tasks.statDoneLabel")}</span>
         <span className="font-semibold text-white">{stats.completed}</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-violet-500" />
-        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">В работе:</span>
+        <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">{t("tasks.statInProgressLabel")}</span>
         <span className="font-semibold text-white">{stats.inProgress}</span>
       </div>
       {stats.overdue > 0 && (
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-red-500" />
-          <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">Просрочено:</span>
+          <span className="text-gray-500 text-xs uppercase tracking-wide font-medium">{t("tasks.statOverdueLabel")}</span>
           <span className="font-semibold text-red-400">{stats.overdue}</span>
         </div>
       )}

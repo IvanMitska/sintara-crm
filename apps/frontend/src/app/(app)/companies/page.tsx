@@ -39,6 +39,7 @@ import { companiesApi } from "@/lib/api";
 import { CompanyModal } from "@/components/companies/CompanyModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Company {
   id: string;
@@ -68,6 +69,7 @@ const industryColors: Record<string, { bg: string; text: string }> = {
 };
 
 export default function CompaniesPage() {
+  const { t } = useTranslation();
   const { formatCompact } = useCurrency();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,9 +206,9 @@ export default function CompaniesPage() {
       a.download = `companies-${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
-      toast.success("Компании выгружены");
+      toast.success(t("companies.exportSuccess"));
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось экспортировать");
+      toast.error(e.response?.data?.message || t("companies.exportError"));
     } finally {
       setIsExporting(false);
     }
@@ -221,12 +223,12 @@ export default function CompaniesPage() {
     try {
       const res = await companiesApi.import(file);
       const count = res.data?.imported ?? res.data?.count ?? 0;
-      toast.success(`Импортировано компаний: ${count}`);
+      toast.success(t("companies.importSuccess", { count }));
       const listRes = await companiesApi.getAll();
       const items = listRes.data?.items || listRes.data?.data || listRes.data || [];
       setCompanies(Array.isArray(items) ? items : []);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Не удалось импортировать");
+      toast.error(err.response?.data?.message || t("companies.importError"));
     } finally {
       setIsImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
@@ -317,28 +319,28 @@ export default function CompaniesPage() {
       <div className="px-4 sm:px-6 py-4 glass-card border-b border-white/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Компании</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">{t("companies.title")}</h1>
 
             {/* Stats Pills - hidden on mobile */}
             <div className="hidden lg:flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg">
                 <Building2 className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm text-gray-400">{t("companies.statTotal")}</span>
                 <span className="text-sm font-bold text-white">{companies.length}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-green-500" />
-                <span className="text-sm text-green-400">Активные</span>
+                <span className="text-sm text-green-400">{t("companies.active")}</span>
                 <span className="text-sm font-bold text-green-400">{activeCompanies}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 rounded-lg">
                 <TrendingUp className="w-4 h-4 text-violet-400" />
-                <span className="text-sm text-violet-400">Выручка</span>
+                <span className="text-sm text-violet-400">{t("companies.revenue")}</span>
                 <span className="text-sm font-bold text-violet-400">{formatRevenue(totalRevenue)}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-lg">
                 <Users className="w-4 h-4 text-purple-400" />
-                <span className="text-sm text-purple-400">Сотрудники</span>
+                <span className="text-sm text-purple-400">{t("companies.employees")}</span>
                 <span className="text-sm font-bold text-purple-400">{totalEmployees}</span>
               </div>
             </div>
@@ -350,7 +352,7 @@ export default function CompaniesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск..."
+                placeholder={t("common.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full sm:w-48 lg:w-72 pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm text-white placeholder-gray-400 border border-white/10 focus:ring-2 focus:ring-violet-500 focus:bg-white/10"
@@ -392,7 +394,7 @@ export default function CompaniesPage() {
             <button
               onClick={handleExport}
               disabled={isExporting}
-              title="Экспорт в Excel"
+              title={t("companies.exportExcel")}
               className="hidden sm:block p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-50"
             >
               <Download className="w-5 h-5 text-gray-400" />
@@ -400,7 +402,7 @@ export default function CompaniesPage() {
             <button
               onClick={handleImportClick}
               disabled={isImporting}
-              title="Импорт из Excel/CSV"
+              title={t("companies.importExcel")}
               className="hidden sm:block p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-50"
             >
               <Upload className="w-5 h-5 text-gray-400" />
@@ -419,7 +421,7 @@ export default function CompaniesPage() {
               className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:from-violet-600 hover:to-purple-600 shadow-sm"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Новая компания</span>
+              <span className="hidden sm:inline">{t("companies.newCompany")}</span>
             </button>
           </div>
         </div>
@@ -461,21 +463,21 @@ export default function CompaniesPage() {
                   onClick={() => handleSort("name")}
                   className="flex-1 min-w-[220px] flex items-center gap-2 px-4 h-full hover:bg-white/5 text-left"
                 >
-                  <span className="font-semibold text-gray-300">Компания</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colCompany")}</span>
                   {sortField === "name" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 <div className="w-[120px] flex items-center px-4 h-full border-l border-white/5">
-                  <span className="font-semibold text-gray-300">Отрасль</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colIndustry")}</span>
                 </div>
 
                 <button
                   onClick={() => handleSort("revenue")}
                   className="w-[130px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-l border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Выручка</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colRevenue")}</span>
                   {sortField === "revenue" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
@@ -485,18 +487,18 @@ export default function CompaniesPage() {
                   onClick={() => handleSort("employees")}
                   className="w-[100px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-l border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Люди</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colPeople")}</span>
                   {sortField === "employees" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 <div className="w-[180px] flex items-center px-4 h-full border-l border-white/5">
-                  <span className="font-semibold text-gray-300">Контакты</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colContacts")}</span>
                 </div>
 
                 <div className="w-[100px] flex items-center px-4 h-full border-l border-white/5">
-                  <span className="font-semibold text-gray-300">Статус</span>
+                  <span className="font-semibold text-gray-300">{t("companies.colStatus")}</span>
                 </div>
               </div>
             </div>
@@ -553,22 +555,22 @@ export default function CompaniesPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
-                            Просмотреть
+                            {t("common.view")}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(company); }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Pencil className="w-4 h-4 text-gray-400" />
-                            Редактировать
+                            {t("common.edit")}
                           </button>
                           <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5">
                             <Briefcase className="w-4 h-4 text-gray-400" />
-                            Создать сделку
+                            {t("companies.createDeal")}
                           </button>
                           <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5">
                             <FileText className="w-4 h-4 text-gray-400" />
-                            Документы
+                            {t("companies.documents")}
                           </button>
                           <div className="border-t border-white/5 my-1" />
                           <button
@@ -576,7 +578,7 @@ export default function CompaniesPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" />
-                            Удалить
+                            {t("common.delete")}
                           </button>
                         </div>
                       )}
@@ -604,7 +606,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-white">{company.name}</p>
-                          <p className="text-xs text-gray-400">ИНН: {company.inn}</p>
+                          <p className="text-xs text-gray-400">{t("companies.inn")}: {company.inn}</p>
                         </div>
                       </div>
                     </div>
@@ -648,12 +650,12 @@ export default function CompaniesPage() {
                       {company.status === "active" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium">
                           <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          Активная
+                          {t("companies.statusActive")}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 text-gray-400 rounded-lg text-xs font-medium">
                           <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          Неактивна
+                          {t("companies.statusInactive")}
                         </span>
                       )}
                     </div>
@@ -666,7 +668,7 @@ export default function CompaniesPage() {
                   <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
                     <Building2 className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-400 font-medium">Компании не найдены</p>
+                  <p className="text-gray-400 font-medium">{t("companies.notFound")}</p>
                 </div>
               )}
               </div>
@@ -675,16 +677,16 @@ export default function CompaniesPage() {
             {/* Selected Actions Bar */}
             {selectedCompanies.size > 0 && (
               <div className="bg-gradient-to-r from-violet-500 to-purple-500 text-white px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
-                <span className="font-medium text-sm sm:text-base whitespace-nowrap">Выбрано: {selectedCompanies.size}</span>
+                <span className="font-medium text-sm sm:text-base whitespace-nowrap">{t("common.selected", { count: selectedCompanies.size })}</span>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <button className="hidden sm:block px-4 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
-                    Экспорт
+                    {t("common.export")}
                   </button>
                   <button className="hidden sm:block px-4 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
-                    Объединить
+                    {t("companies.merge")}
                   </button>
                   <button className="px-3 sm:px-4 py-1.5 bg-red-500 rounded-lg text-sm font-medium hover:bg-red-600">
-                    Удалить
+                    {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -710,7 +712,7 @@ export default function CompaniesPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-white">{company.name}</p>
-                          <p className="text-xs text-gray-400">ИНН: {company.inn}</p>
+                          <p className="text-xs text-gray-400">{t("companies.inn")}: {company.inn}</p>
                         </div>
                       </div>
                       <button
@@ -733,22 +735,22 @@ export default function CompaniesPage() {
                       )}
                       {company.status === "active" ? (
                         <span className="px-2.5 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium">
-                          Активная
+                          {t("companies.statusActive")}
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 bg-white/10 text-gray-400 rounded-lg text-xs font-medium">
-                          Неактивна
+                          {t("companies.statusInactive")}
                         </span>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="bg-white/5 rounded-xl p-3">
-                        <p className="text-xs text-gray-400 mb-1">Выручка</p>
+                        <p className="text-xs text-gray-400 mb-1">{t("companies.revenue")}</p>
                         <p className="text-sm font-bold text-white">{company.revenue ? formatRevenue(Number(company.revenue)) : "—"}</p>
                       </div>
                       <div className="bg-white/5 rounded-xl p-3">
-                        <p className="text-xs text-gray-400 mb-1">Сотрудники</p>
+                        <p className="text-xs text-gray-400 mb-1">{t("companies.employees")}</p>
                         <p className="text-sm font-bold text-white">{company.employees || company.size || "—"}</p>
                       </div>
                     </div>
@@ -767,11 +769,11 @@ export default function CompaniesPage() {
                     <div className="flex items-center gap-4 pt-3 border-t border-white/5 text-xs text-gray-400">
                       <span className="flex items-center gap-1">
                         <Users className="w-3.5 h-3.5" />
-                        {company.contactsCount} контактов
+                        {t("companies.contactsCount", { count: company.contactsCount ?? 0 })}
                       </span>
                       <span className="flex items-center gap-1">
                         <Briefcase className="w-3.5 h-3.5" />
-                        {company.dealsCount} сделок
+                        {t("companies.dealsCount", { count: company.dealsCount ?? 0 })}
                       </span>
                     </div>
                   </div>
@@ -791,7 +793,7 @@ export default function CompaniesPage() {
             />
             <div className="fixed inset-0 md:inset-auto md:relative md:w-96 w-full glass-card md:border-l border-white/10 flex flex-col z-[70]">
               <div className="p-4 border-b border-white/5 flex items-center justify-between">
-                <h3 className="font-semibold text-white">Профиль компании</h3>
+                <h3 className="font-semibold text-white">{t("companies.profile")}</h3>
                 <button
                   onClick={() => setSelectedCompany(null)}
                   className="p-1.5 hover:bg-white/5 rounded-lg"
@@ -807,7 +809,7 @@ export default function CompaniesPage() {
                   {selectedCompany.name.substring(0, 2).toUpperCase()}
                 </div>
                 <h2 className="text-xl font-bold text-white text-center">{selectedCompany.name}</h2>
-                <p className="text-sm text-gray-400">ИНН: {selectedCompany.inn}</p>
+                <p className="text-sm text-gray-400">{t("companies.inn")}: {selectedCompany.inn}</p>
 
                 <div className="flex gap-2 mt-3">
                   {selectedCompany.industry && (
@@ -821,11 +823,11 @@ export default function CompaniesPage() {
                   )}
                   {selectedCompany.status === "active" ? (
                     <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium">
-                      Активная
+                      {t("companies.statusActive")}
                     </span>
                   ) : (
                     <span className="px-3 py-1 bg-white/10 text-gray-400 rounded-lg text-xs font-medium">
-                      Неактивна
+                      {t("companies.statusInactive")}
                     </span>
                   )}
                 </div>
@@ -835,37 +837,37 @@ export default function CompaniesPage() {
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="bg-violet-500/20 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-violet-400">{formatRevenue(selectedCompany.revenue)}</p>
-                  <p className="text-xs text-violet-400/70">Выручка</p>
+                  <p className="text-xs text-violet-400/70">{t("companies.revenue")}</p>
                 </div>
                 <div className="bg-purple-500/20 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-purple-400">{selectedCompany.employees}</p>
-                  <p className="text-xs text-purple-400/70">Сотрудников</p>
+                  <p className="text-xs text-purple-400/70">{t("companies.employeesCountLabel")}</p>
                 </div>
               </div>
 
               {/* Contact Info */}
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Контактная информация</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t("companies.contactInfo")}</p>
                   <div className="bg-white/5 rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <Phone className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-400">Телефон</p>
+                        <p className="text-xs text-gray-400">{t("common.phone")}</p>
                         <p className="text-sm font-medium text-white">{selectedCompany.phone}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <Mail className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-400">Email</p>
+                        <p className="text-xs text-gray-400">{t("common.email")}</p>
                         <p className="text-sm font-medium text-white">{selectedCompany.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <Globe className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-400">Сайт</p>
+                        <p className="text-xs text-gray-400">{t("companies.website")}</p>
                         <a href={`https://${selectedCompany.website}`} className="text-sm font-medium text-violet-400 hover:underline flex items-center gap-1">
                           {selectedCompany.website}
                           <ExternalLink className="w-3 h-3" />
@@ -875,7 +877,7 @@ export default function CompaniesPage() {
                     <div className="flex items-center gap-3">
                       <MapPin className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-400">Адрес</p>
+                        <p className="text-xs text-gray-400">{t("companies.address")}</p>
                         <p className="text-sm font-medium text-white">{selectedCompany.address}</p>
                       </div>
                     </div>
@@ -883,26 +885,26 @@ export default function CompaniesPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Связи</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t("companies.relations")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-white/5 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-white">{selectedCompany.contactsCount}</p>
-                      <p className="text-xs text-gray-400">Контактов</p>
+                      <p className="text-xs text-gray-400">{t("companies.contactsLabel")}</p>
                     </div>
                     <div className="bg-white/5 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-white">{selectedCompany.dealsCount}</p>
-                      <p className="text-xs text-gray-400">Сделок</p>
+                      <p className="text-xs text-gray-400">{t("companies.dealsLabel")}</p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Информация</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{t("companies.information")}</p>
                   <div className="bg-white/5 rounded-xl p-4">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-400">Добавлена</p>
+                        <p className="text-xs text-gray-400">{t("companies.added")}</p>
                         <p className="text-sm font-medium text-white">{formatDate(selectedCompany.createdAt)}</p>
                       </div>
                     </div>
@@ -918,18 +920,18 @@ export default function CompaniesPage() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl font-medium hover:from-violet-600 hover:to-purple-600"
               >
                 <Pencil className="w-4 h-4" />
-                Редактировать
+                {t("common.edit")}
               </button>
               <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/10 text-gray-300 rounded-xl font-medium hover:bg-white/20">
                 <Briefcase className="w-4 h-4" />
-                Создать сделку
+                {t("companies.createDeal")}
               </button>
               <button
                 onClick={() => handleOpenDeleteDialog(selectedCompany)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-400 hover:bg-red-500/10 rounded-xl font-medium"
               >
                 <Trash2 className="w-4 h-4" />
-                Удалить компанию
+                {t("companies.deleteCompany")}
               </button>
             </div>
             </div>
@@ -951,10 +953,10 @@ export default function CompaniesPage() {
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-        title="Удалить компанию?"
-        description={`Вы уверены, что хотите удалить компанию "${deletingCompany?.name}"? Все связанные контакты и сделки будут отвязаны. Это действие нельзя отменить.`}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("companies.deleteConfirm")}
+        description={t("companies.deleteConfirmFull", { name: deletingCompany?.name ?? "" })}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={isDeleting}
       />

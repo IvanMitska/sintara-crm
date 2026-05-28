@@ -7,6 +7,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 import { cn } from "@/lib/utils";
 import {
   Check,
@@ -89,23 +90,23 @@ const emptyForm: FormData = {
   description: "",
 };
 
-const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; dot: string }> = {
-  LOW: { label: "Низкий", color: "text-gray-400 bg-white/5 border-white/10", dot: "bg-gray-400" },
-  MEDIUM: { label: "Средний", color: "text-violet-300 bg-violet-500/15 border-violet-500/40", dot: "bg-violet-400" },
-  HIGH: { label: "Высокий", color: "text-red-300 bg-red-500/15 border-red-500/40", dot: "bg-red-400" },
+const PRIORITY_CONFIG: Record<Priority, { labelKey: string; color: string; dot: string }> = {
+  LOW: { labelKey: "deals.priorityLow", color: "text-gray-400 bg-white/5 border-white/10", dot: "bg-gray-400" },
+  MEDIUM: { labelKey: "deals.priorityMedium", color: "text-violet-300 bg-violet-500/15 border-violet-500/40", dot: "bg-violet-400" },
+  HIGH: { labelKey: "deals.priorityHigh", color: "text-red-300 bg-red-500/15 border-red-500/40", dot: "bg-red-400" },
 };
 
-const TEMP_OPTIONS: { id: Temperature; label: string; icon: any; color: string }[] = [
-  { id: "", label: "Не задана", icon: Zap, color: "text-gray-400 bg-white/5 border-white/10" },
-  { id: "HOT", label: "Горячая", icon: Flame, color: "text-red-400 bg-red-500/15 border-red-500/40" },
-  { id: "WARM", label: "Тёплая", icon: Thermometer, color: "text-amber-400 bg-amber-500/15 border-amber-500/40" },
-  { id: "COLD", label: "Холодная", icon: Snowflake, color: "text-blue-400 bg-blue-500/15 border-blue-500/40" },
+const TEMP_OPTIONS: { id: Temperature; labelKey: string; icon: any; color: string }[] = [
+  { id: "", labelKey: "deals.temperatureNone", icon: Zap, color: "text-gray-400 bg-white/5 border-white/10" },
+  { id: "HOT", labelKey: "deals.hot", icon: Flame, color: "text-red-400 bg-red-500/15 border-red-500/40" },
+  { id: "WARM", labelKey: "deals.warm", icon: Thermometer, color: "text-amber-400 bg-amber-500/15 border-amber-500/40" },
+  { id: "COLD", labelKey: "deals.cold", icon: Snowflake, color: "text-blue-400 bg-blue-500/15 border-blue-500/40" },
 ];
 
 const STEPS = [
-  { id: 0, title: "Основное", subtitle: "Название, сумма, этап", icon: Briefcase },
-  { id: 1, title: "Клиент", subtitle: "Контакт и компания", icon: UserIcon },
-  { id: 2, title: "Детали", subtitle: "Температура, теги, описание", icon: Sparkles },
+  { id: 0, titleKey: "deals.stepEssentialsTitle", subtitleKey: "deals.stepEssentialsSubtitle", icon: Briefcase },
+  { id: 1, titleKey: "deals.stepClientTitle", subtitleKey: "deals.stepClientSubtitle", icon: UserIcon },
+  { id: 2, titleKey: "deals.stepDetailsTitle", subtitleKey: "deals.stepDetailsSubtitle", icon: Sparkles },
 ];
 
 export function DealModal({
@@ -118,6 +119,7 @@ export function DealModal({
   companies = [],
 }: DealModalProps) {
   const { symbol, formatCompact } = useCurrency();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(emptyForm);
@@ -203,18 +205,18 @@ export function DealModal({
       : true;
 
   const handleAddTag = () => {
-    const t = tagInput.trim();
-    if (!t) return;
-    if (formData.tags.includes(t)) {
+    const trimmed = tagInput.trim();
+    if (!trimmed) return;
+    if (formData.tags.includes(trimmed)) {
       setTagInput("");
       return;
     }
-    setFormData({ ...formData, tags: [...formData.tags, t] });
+    setFormData({ ...formData, tags: [...formData.tags, trimmed] });
     setTagInput("");
   };
 
   const handleRemoveTag = (tag: string) => {
-    setFormData({ ...formData, tags: formData.tags.filter((t) => t !== tag) });
+    setFormData({ ...formData, tags: formData.tags.filter((existing) => existing !== tag) });
   };
 
   const handleSubmit = () => {
@@ -258,10 +260,10 @@ export function DealModal({
               </div>
               <div className="min-w-0">
                 <h2 className="text-lg font-bold text-white truncate">
-                  {isEdit ? "Редактировать сделку" : "Новая сделка"}
+                  {isEdit ? t("deals.editDeal") : t("deals.newDeal")}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5 truncate">
-                  Шаг {step + 1} из {STEPS.length} — {STEPS[step].title}
+                  {t("deals.stepProgress", { current: step + 1, total: STEPS.length })} — {t(STEPS[step].titleKey)}
                 </p>
               </div>
             </div>
@@ -305,10 +307,10 @@ export function DealModal({
                           active ? "text-white" : reached ? "text-violet-300" : "text-gray-500"
                         )}
                       >
-                        {s.title}
+                        {t(s.titleKey)}
                       </div>
                       <div className="text-[10px] text-gray-500 truncate hidden sm:block">
-                        {s.subtitle}
+                        {t(s.subtitleKey)}
                       </div>
                     </div>
                     {i < STEPS.length - 1 && (
@@ -374,7 +376,7 @@ export function DealModal({
             {/* Preview column */}
             <aside className="hidden md:flex flex-col border-l border-white/5 bg-black/20 p-5">
               <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-3">
-                Превью
+                {t("deals.preview")}
               </div>
               <PreviewCard
                 formData={formData}
@@ -384,11 +386,11 @@ export function DealModal({
               <div className="mt-auto pt-4 text-[11px] text-gray-500 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="w-1 h-1 rounded-full bg-violet-500" />
-                  Карточка обновляется вживую
+                  {t("deals.previewLiveHint")}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1 h-1 rounded-full bg-violet-500" />
-                  Можно вернуться на любой шаг
+                  {t("deals.previewStepHint")}
                 </div>
               </div>
             </aside>
@@ -403,7 +405,7 @@ export function DealModal({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
             >
               <ChevronLeft className="w-4 h-4" />
-              Назад
+              {t("common.back")}
             </button>
 
             <div className="flex items-center gap-2">
@@ -412,7 +414,7 @@ export function DealModal({
                 onClick={onClose}
                 className="px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5"
               >
-                Отмена
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -426,7 +428,7 @@ export function DealModal({
                   "disabled:opacity-40 disabled:cursor-not-allowed"
                 )}
               >
-                {step === STEPS.length - 1 ? (isEdit ? "Сохранить" : "Создать сделку") : "Далее"}
+                {step === STEPS.length - 1 ? (isEdit ? t("common.save") : t("deals.createDeal")) : t("common.next")}
                 {step !== STEPS.length - 1 && <ChevronRight className="w-4 h-4" />}
               </button>
             </div>
@@ -449,20 +451,21 @@ function StepEssentials({
   stages: StageOption[];
   symbol: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6 max-w-xl">
-      <Field label="Название сделки" required hint="Коротко опишите, о чём сделка">
+      <Field label={t("deals.dealTitleLabel")} required hint={t("deals.dealTitleHint")}>
         <input
           type="text"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           autoFocus
-          placeholder="Например: Внедрение CRM для производства"
+          placeholder={t("deals.dealTitlePlaceholder")}
           className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-[15px] text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/60 outline-none"
         />
       </Field>
 
-      <Field label="Сумма сделки" required>
+      <Field label={t("deals.dealAmount")} required>
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg font-semibold pointer-events-none">
             {symbol}
@@ -479,7 +482,7 @@ function StepEssentials({
         </div>
       </Field>
 
-      <Field label="Этап воронки" required hint="На какой стадии начинается сделка">
+      <Field label={t("deals.stageFunnelLabel")} required hint={t("deals.stageFunnelHint")}>
         {stages.length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {stages.map((s) => {
@@ -510,13 +513,13 @@ function StepEssentials({
           </div>
         ) : (
           <p className="text-sm text-gray-500 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/10">
-            Нет стадий в текущей воронке. Сначала настройте воронку.
+            {t("deals.noStagesConfigured")}
           </p>
         )}
       </Field>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Приоритет">
+        <Field label={t("deals.priority")}>
           <div className="flex gap-2">
             {(["LOW", "MEDIUM", "HIGH"] as Priority[]).map((p) => {
               const cfg = PRIORITY_CONFIG[p];
@@ -532,14 +535,14 @@ function StepEssentials({
                   )}
                 >
                   <span className={cn("w-2 h-2 rounded-full", cfg.dot)} />
-                  {cfg.label}
+                  {t(cfg.labelKey)}
                 </button>
               );
             })}
           </div>
         </Field>
 
-        <Field label="Ожидаемая дата закрытия">
+        <Field label={t("deals.expectedCloseDate")}>
           <input
             type="date"
             value={formData.expectedDate}
@@ -592,6 +595,7 @@ function StepClient({
   companyAnchorRef: React.RefObject<HTMLDivElement>;
   companyPanelRef: React.RefObject<HTMLDivElement>;
 }) {
+  const { t } = useTranslation();
   const selectedContact = contacts.find((c) => c.id === formData.contactId) || null;
   const selectedCompany = companies.find((c) => c.id === formData.companyId) || null;
 
@@ -600,14 +604,14 @@ function StepClient({
       <div className="flex items-start gap-3 p-4 rounded-xl bg-violet-500/5 border border-violet-500/20">
         <UserIcon className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-gray-300">
-          <p className="font-medium text-white mb-1">Привяжите клиента (необязательно)</p>
+          <p className="font-medium text-white mb-1">{t("deals.linkClientTitle")}</p>
           <p className="text-xs text-gray-500">
-            Сделка может быть без контакта — привязать можно позже из карточки сделки.
+            {t("deals.linkClientDesc")}
           </p>
         </div>
       </div>
 
-      <Field label="Контакт" hint="Найдите в существующих или оставьте пустым">
+      <Field label={t("common.contact")} hint={t("deals.contactSearchHint")}>
         {selectedContact ? (
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/40">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
@@ -623,7 +627,7 @@ function StepClient({
                 setContactSearch("");
               }}
               className="p-1 rounded-lg hover:bg-white/10 text-gray-400"
-              title="Отвязать контакт"
+              title={t("deals.unlinkContact")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -640,7 +644,7 @@ function StepClient({
                   setContactSearch(e.target.value);
                   setIsContactOpen(true);
                 }}
-                placeholder="Начните вводить имя контакта"
+                placeholder={t("deals.contactSearchPlaceholder")}
                 className="w-full pl-10 pr-9 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/60 outline-none"
               />
               <ChevronDown
@@ -658,7 +662,7 @@ function StepClient({
             >
               {filteredContacts.length === 0 ? (
                 <div className="px-3 py-3 text-center text-xs text-gray-500">
-                  Не найдено. Создайте контакт в разделе «Контакты» и вернитесь сюда.
+                  {t("deals.contactNotFoundHint")}
                 </div>
               ) : (
                 filteredContacts.map((c) => (
@@ -685,7 +689,7 @@ function StepClient({
         )}
       </Field>
 
-      <Field label="Компания" hint="Привяжите существующую или оставьте пустым">
+      <Field label={t("common.company")} hint={t("deals.companySearchHint")}>
         {selectedCompany ? (
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/40">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -701,7 +705,7 @@ function StepClient({
                 setCompanySearch("");
               }}
               className="p-1 rounded-lg hover:bg-white/10 text-gray-400"
-              title="Отвязать компанию"
+              title={t("deals.unlinkCompany")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -718,7 +722,7 @@ function StepClient({
                   setCompanySearch(e.target.value);
                   setIsCompanyOpen(true);
                 }}
-                placeholder="Начните вводить название"
+                placeholder={t("deals.companySearchPlaceholder")}
                 className="w-full pl-10 pr-9 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/60 outline-none"
               />
               <ChevronDown
@@ -736,7 +740,7 @@ function StepClient({
             >
               {filteredCompanies.length === 0 ? (
                 <div className="px-3 py-3 text-center text-xs text-gray-500">
-                  Не найдено. Создайте компанию в разделе «Компании» и вернитесь сюда.
+                  {t("deals.companyNotFoundHint")}
                 </div>
               ) : (
                 filteredCompanies.map((c) => (
@@ -782,9 +786,10 @@ function StepDetails({
   onAddTag: () => void;
   onRemoveTag: (t: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6 max-w-xl">
-      <Field label="Температура" hint="Насколько горячий клиент?">
+      <Field label={t("deals.temperature")} hint={t("deals.temperatureHint")}>
         <div className="grid grid-cols-4 gap-2">
           {TEMP_OPTIONS.map((opt) => {
             const Icon = opt.icon;
@@ -800,14 +805,14 @@ function StepDetails({
                 )}
               >
                 <Icon className="w-5 h-5" />
-                {opt.label}
+                {t(opt.labelKey)}
               </button>
             );
           })}
         </div>
       </Field>
 
-      <Field label="Теги" hint="Enter — добавить, × — удалить">
+      <Field label={t("deals.tags")} hint={t("deals.tagsHint")}>
         <div className="space-y-2">
           <div className="relative">
             <TagIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
@@ -824,23 +829,23 @@ function StepDetails({
                   onRemoveTag(formData.tags[formData.tags.length - 1]);
                 }
               }}
-              placeholder="B2B, Оборудование, VIP..."
+              placeholder={t("deals.tagsPlaceholder")}
               className="w-full pl-10 pr-3 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/60 outline-none"
             />
           </div>
           {formData.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {formData.tags.map((t) => (
+              {formData.tags.map((tag) => (
                 <span
-                  key={t}
+                  key={tag}
                   className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-violet-500/15 border border-violet-500/30 text-xs font-medium text-violet-200"
                 >
-                  {t}
+                  {tag}
                   <button
                     type="button"
-                    onClick={() => onRemoveTag(t)}
+                    onClick={() => onRemoveTag(tag)}
                     className="p-0.5 rounded hover:bg-white/10 text-violet-300"
-                    title="Удалить тег"
+                    title={t("deals.removeTag")}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -851,14 +856,14 @@ function StepDetails({
         </div>
       </Field>
 
-      <Field label="Описание" hint="Контекст, договорённости, важные детали">
+      <Field label={t("deals.description")} hint={t("deals.descriptionHint")}>
         <div className="relative">
           <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-500 pointer-events-none" />
           <textarea
             rows={5}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Что важно знать о сделке..."
+            placeholder={t("deals.descriptionPlaceholder")}
             className="w-full pl-10 pr-3 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/60 outline-none resize-none"
           />
         </div>
@@ -969,8 +974,9 @@ function PreviewCard({
   stage?: StageOption;
   formatCompact: (n: number) => string;
 }) {
+  const { t } = useTranslation();
   const amount = parseFloat(formData.amount) || 0;
-  const tempCfg = TEMP_OPTIONS.find((t) => t.id === formData.temperature);
+  const tempCfg = TEMP_OPTIONS.find((opt) => opt.id === formData.temperature);
   const TempIcon = tempCfg?.icon;
   const prioCfg = PRIORITY_CONFIG[formData.priority];
 
@@ -992,7 +998,7 @@ function PreviewCard({
       {/* Title + indicators */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <h4 className="font-semibold text-white text-[15px] leading-snug line-clamp-2 flex-1">
-          {formData.title.trim() || "Название сделки"}
+          {formData.title.trim() || t("deals.dealTitleLabel")}
         </h4>
         <div className="flex items-center gap-1 flex-shrink-0">
           {tempCfg && tempCfg.id && TempIcon && (
@@ -1027,9 +1033,9 @@ function PreviewCard({
       {/* Tags */}
       {formData.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {formData.tags.slice(0, 3).map((t) => (
-            <span key={t} className="px-2 py-0.5 bg-white/5 text-gray-300 text-xs font-medium rounded-md">
-              {t}
+          {formData.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="px-2 py-0.5 bg-white/5 text-gray-300 text-xs font-medium rounded-md">
+              {tag}
             </span>
           ))}
           {formData.tags.length > 3 && (
@@ -1044,7 +1050,7 @@ function PreviewCard({
       <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs text-gray-500">
         <div className={cn("flex items-center gap-1.5 px-2 py-1 rounded-md", prioCfg.color)}>
           <span className={cn("w-1.5 h-1.5 rounded-full", prioCfg.dot)} />
-          <span className="font-semibold">{prioCfg.label}</span>
+          <span className="font-semibold">{t(prioCfg.labelKey)}</span>
         </div>
         {formData.expectedDate ? (
           <div className="flex items-center gap-1">
@@ -1059,7 +1065,7 @@ function PreviewCard({
         ) : (
           <div className="flex items-center gap-1 text-gray-600">
             <Clock className="w-3 h-3" />
-            <span>Без срока</span>
+            <span>{t("deals.noDueDate")}</span>
           </div>
         )}
       </div>

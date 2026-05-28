@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useBookingResources, useBookings, useBookingStats, useWaitingList, useBookingServices } from "@/lib/hooks";
 import { bookingApi } from "@/lib/api";
 import { mutate } from "swr";
+import { useTranslation } from "@/components/providers/language-provider";
 
 // Types
 interface Resource {
@@ -66,14 +67,15 @@ interface WaitingListItem {
   status: string;
 }
 
-// Business categories for new resource modal
+// Business categories for new resource modal.
+// nameKey/descriptionKey map to translation keys resolved via t() at render.
 const businessCategories = [
-  { id: "MEDICAL", name: "Медицинские услуги", description: "Врачи, косметологи, диагностика", icon: Stethoscope, color: "#3B82F6", type: "SPECIALIST" },
-  { id: "EQUIPMENT", name: "Аренда оборудования", description: "Строительная техника, электроинструмент", icon: Wrench, color: "#F59E0B", type: "EQUIPMENT" },
-  { id: "SERVICES", name: "Услуги специалистов", description: "Консалтинг, ремонт, бьюти-индустрия, фитнес", icon: Users, color: "#8B5CF6", type: "SPECIALIST" },
-  { id: "TRANSPORT", name: "Аренда автомобилей", description: "Легковые и грузовые автомобили, мототехника", icon: Car, color: "#10B981", type: "VEHICLE" },
-  { id: "REAL_ESTATE", name: "Аренда помещений", description: "Банкетные залы, квартиры и дома, фотостудии", icon: Building, color: "#EC4899", type: "ROOM" },
-  { id: "OTHER", name: "Другое", description: "Прочие услуги и ресурсы", icon: MoreHorizontal, color: "#6B7280", type: "OTHER" },
+  { id: "MEDICAL", nameKey: "booking.categoryMedical", descriptionKey: "booking.categoryMedicalDesc", icon: Stethoscope, color: "#3B82F6", type: "SPECIALIST" },
+  { id: "EQUIPMENT", nameKey: "booking.categoryEquipment", descriptionKey: "booking.categoryEquipmentDesc", icon: Wrench, color: "#F59E0B", type: "EQUIPMENT" },
+  { id: "SERVICES", nameKey: "booking.categoryServices", descriptionKey: "booking.categoryServicesDesc", icon: Users, color: "#8B5CF6", type: "SPECIALIST" },
+  { id: "TRANSPORT", nameKey: "booking.categoryTransport", descriptionKey: "booking.categoryTransportDesc", icon: Car, color: "#10B981", type: "VEHICLE" },
+  { id: "REAL_ESTATE", nameKey: "booking.categoryRealEstate", descriptionKey: "booking.categoryRealEstateDesc", icon: Building, color: "#EC4899", type: "ROOM" },
+  { id: "OTHER", nameKey: "booking.categoryOther", descriptionKey: "booking.categoryOtherDesc", icon: MoreHorizontal, color: "#6B7280", type: "OTHER" },
 ];
 
 // Time slots
@@ -82,8 +84,16 @@ const timeSlots = Array.from({ length: 15 }, (_, i) => {
   return `${hour.toString().padStart(2, "0")}:00`;
 });
 
-// Days of week
-const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+// Days of week — id is a stable React key, labelKey resolves to a translation
+const daysOfWeek = [
+  { id: "mon", labelKey: "booking.dayMon" },
+  { id: "tue", labelKey: "booking.dayTue" },
+  { id: "wed", labelKey: "booking.dayWed" },
+  { id: "thu", labelKey: "booking.dayThu" },
+  { id: "fri", labelKey: "booking.dayFri" },
+  { id: "sat", labelKey: "booking.daySat" },
+  { id: "sun", labelKey: "booking.daySun" },
+];
 
 // Get avatar initials from name
 const getInitials = (name: string) => {
@@ -95,6 +105,8 @@ const getInitials = (name: string) => {
 };
 
 export default function BookingPage() {
+  const { t, language } = useTranslation();
+  const locale = language === "ru" ? "ru-RU" : "en-US";
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showNewResourceModal, setShowNewResourceModal] = useState(false);
   const [showNewResourceForm, setShowNewResourceForm] = useState(false);
@@ -192,7 +204,7 @@ export default function BookingPage() {
   // Save booking (create or update)
   const handleSaveBooking = async () => {
     if (!bookingForm.resourceId || !bookingForm.startTime || !bookingForm.endTime) {
-      setBookingError('Заполните обязательные поля');
+      setBookingError(t("booking.fillRequiredFields"));
       return;
     }
 
@@ -223,7 +235,7 @@ export default function BookingPage() {
       setShowBookingModal(false);
     } catch (error: any) {
       console.error('Failed to save booking:', error);
-      setBookingError(error.response?.data?.message || 'Ошибка сохранения записи');
+      setBookingError(error.response?.data?.message || t("booking.saveError"));
     } finally {
       setIsSavingBooking(false);
     }
@@ -233,7 +245,7 @@ export default function BookingPage() {
   const handleDeleteBooking = async () => {
     if (!editingBooking) return;
 
-    if (!confirm('Вы уверены, что хотите удалить эту запись?')) return;
+    if (!confirm(t("booking.deleteConfirm"))) return;
 
     try {
       await bookingApi.deleteBooking(editingBooking.id);
@@ -241,7 +253,7 @@ export default function BookingPage() {
       setShowBookingModal(false);
     } catch (error) {
       console.error('Failed to delete booking:', error);
-      setBookingError('Ошибка удаления записи');
+      setBookingError(t("booking.deleteError"));
     }
   };
 
@@ -301,7 +313,7 @@ export default function BookingPage() {
   };
 
   const formatMonthYear = (date: Date) => {
-    return date.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    return date.toLocaleDateString(locale, { month: "long", year: "numeric" });
   };
 
   const isToday = (day: number | null) => {
@@ -376,7 +388,7 @@ export default function BookingPage() {
   const getBookingTitle = (booking: Booking) => {
     if (booking.title) return booking.title;
     if (booking.service?.name) return booking.service.name;
-    return "Запись";
+    return t("booking.bookingFallbackTitle");
   };
 
   // Get client name
@@ -408,15 +420,15 @@ export default function BookingPage() {
       <div className="glass-card border-b border-white/10 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-bold text-white">Онлайн-запись</h1>
+            <h1 className="text-2xl font-bold text-white">{t("booking.title")}</h1>
 
             {/* Date display */}
             <div className="flex items-center gap-2 text-gray-400">
               <span className="text-lg font-medium">
-                {selectedDate.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                {selectedDate.toLocaleDateString(locale, { day: "numeric", month: "short" })}
               </span>
               <div className="flex items-center gap-1 text-sm text-gray-400">
-                <span>+{bookings.length} записей</span>
+                <span>{t("booking.bookingsCount", { count: bookings.length })}</span>
               </div>
             </div>
 
@@ -431,7 +443,7 @@ export default function BookingPage() {
                     : "text-gray-400 hover:text-white"
                 )}
               >
-                Записи
+                {t("booking.tabBookings")}
               </button>
               <button
                 onClick={() => setActiveTab("services")}
@@ -442,7 +454,7 @@ export default function BookingPage() {
                     : "text-gray-400 hover:text-white"
                 )}
               >
-                Услуги
+                {t("booking.services")}
               </button>
             </div>
           </div>
@@ -453,7 +465,7 @@ export default function BookingPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Фильтр"
+                placeholder={t("booking.filterPlaceholder")}
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 className="w-64 pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 text-white placeholder-gray-400"
@@ -464,11 +476,11 @@ export default function BookingPage() {
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-orange-500" />
-                <span className="text-gray-400">{stats.pending} Ожидают подтверждения</span>
+                <span className="text-gray-400">{stats.pending} {t("booking.pendingConfirmation")}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500" />
-                <span className="text-gray-400">{stats.noShow} Неявки</span>
+                <span className="text-gray-400">{stats.noShow} {t("booking.noShows")}</span>
               </span>
             </div>
           </div>
@@ -491,7 +503,7 @@ export default function BookingPage() {
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-violet-500 hover:bg-white/5 rounded-xl"
                 >
                   <Plus className="w-5 h-5" />
-                  <span className="font-medium">Добавить ресурс</span>
+                  <span className="font-medium">{t("booking.addResource")}</span>
                 </button>
               </div>
 
@@ -499,7 +511,7 @@ export default function BookingPage() {
               <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-violet-500 hover:bg-white/5 rounded-lg">
                   <ListTodo className="w-4 h-4" />
-                  Показать слоты для нескольких ресурсов
+                  {t("booking.showMultiResourceSlots")}
                 </button>
 
                 {resourcesLoading ? (
@@ -508,7 +520,7 @@ export default function BookingPage() {
                   </div>
                 ) : filteredResources.length === 0 ? (
                   <div className="text-center py-8 text-gray-400 text-sm">
-                    {resources.length === 0 ? "Нет ресурсов" : "Ничего не найдено"}
+                    {resources.length === 0 ? t("booking.noResources") : t("common.notFound")}
                   </div>
                 ) : (
                   <div className="mt-4 space-y-1">
@@ -577,7 +589,7 @@ export default function BookingPage() {
               ))}
               {filteredResources.length === 0 && !resourcesLoading && (
                 <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-                  Добавьте ресурсы для отображения расписания
+                  {t("booking.addResourcesHint")}
                 </div>
               )}
             </div>
@@ -614,7 +626,7 @@ export default function BookingPage() {
                             key={time}
                             onClick={() => handleOpenNewBooking(resource.id, hour)}
                             className="h-16 border-b border-white/5 hover:bg-violet-500/10 cursor-pointer transition-colors"
-                            title={`Создать запись на ${time}`}
+                            title={t("booking.createBookingAt", { time })}
                           />
                         );
                       })}
@@ -645,7 +657,7 @@ export default function BookingPage() {
                               height: `${Math.max(height, 32)}px`,
                               backgroundColor: getBookingColor(booking),
                             }}
-                            title="Нажмите для редактирования"
+                            title={t("booking.clickToEdit")}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
@@ -681,7 +693,7 @@ export default function BookingPage() {
               onClick={() => setZoomLevel(100)}
               className="text-sm text-violet-500 hover:underline"
             >
-              Показать всё
+              {t("booking.showAll")}
             </button>
             <div className="flex items-center gap-2">
               <button
@@ -728,8 +740,8 @@ export default function BookingPage() {
             {/* Days of week */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {daysOfWeek.map((day) => (
-                <div key={day} className="text-center text-xs font-medium text-gray-400 py-1">
-                  {day}
+                <div key={day.id} className="text-center text-xs font-medium text-gray-400 py-1">
+                  {t(day.labelKey)}
                 </div>
               ))}
             </div>
@@ -760,11 +772,11 @@ export default function BookingPage() {
           {/* Waiting List */}
           <div className="flex-1 flex flex-col">
             <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Лист ожидания</span>
+              <span className="text-sm font-semibold text-white">{t("booking.waitingList")}</span>
               <div className="flex items-center gap-2">
                 <button className="text-sm text-violet-500 hover:underline flex items-center gap-1">
                   <Plus className="w-4 h-4" />
-                  Добавить
+                  {t("common.add")}
                 </button>
                 <button className="p-1 hover:bg-white/5 rounded">
                   <X className="w-4 h-4 text-gray-400" />
@@ -777,12 +789,12 @@ export default function BookingPage() {
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                   <ListTodo className="w-8 h-8 text-gray-400" />
                 </div>
-                <p className="text-sm font-medium text-gray-300 mb-1">Лист ожидания</p>
+                <p className="text-sm font-medium text-gray-300 mb-1">{t("booking.waitingList")}</p>
                 <p className="text-xs text-gray-400 mb-3">
-                  Перетащите сюда запись из расписания или добавьте новую
+                  {t("booking.waitingListEmptyHint")}
                 </p>
                 <button className="text-xs text-violet-500 hover:underline">
-                  Как это работает
+                  {t("booking.howItWorks")}
                 </button>
               </div>
             ) : (
@@ -800,7 +812,7 @@ export default function BookingPage() {
                     )}
                     {item.preferredDate && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Желаемая дата: {new Date(item.preferredDate).toLocaleDateString("ru-RU")}
+                        {t("booking.preferredDate")}: {new Date(item.preferredDate).toLocaleDateString(locale)}
                       </p>
                     )}
                   </div>
@@ -818,7 +830,7 @@ export default function BookingPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5">
               <h2 className="text-xl font-bold text-white">
-                {showNewResourceForm ? "Создать ресурс" : "Новый ресурс"}
+                {showNewResourceForm ? t("booking.createResource") : t("booking.newResource")}
               </h2>
               <button
                 onClick={() => {
@@ -840,13 +852,13 @@ export default function BookingPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Название ресурса
+                      {t("booking.resourceName")}
                     </label>
                     <input
                       type="text"
                       value={newResourceName}
                       onChange={(e) => setNewResourceName(e.target.value)}
-                      placeholder="Например: Анна Иванова"
+                      placeholder={t("booking.resourceNamePlaceholder")}
                       className="w-full px-4 py-3 bg-white/5 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 border-0"
                       autoFocus
                     />
@@ -861,8 +873,8 @@ export default function BookingPage() {
                         <selectedCategory.icon className="w-5 h-5" style={{ color: selectedCategory.color }} />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-white">{selectedCategory.name}</p>
-                        <p className="text-xs text-gray-400">Тип: {selectedCategory.type}</p>
+                        <p className="text-sm font-medium text-white">{t(selectedCategory.nameKey)}</p>
+                        <p className="text-xs text-gray-400">{t("booking.typeLabel")}: {selectedCategory.type}</p>
                       </div>
                     </div>
                   )}
@@ -876,7 +888,7 @@ export default function BookingPage() {
                       }}
                       className="flex-1 px-4 py-3 text-gray-300 hover:bg-white/5 rounded-xl font-medium"
                     >
-                      Назад
+                      {t("common.back")}
                     </button>
                     <button
                       onClick={handleCreateResource}
@@ -886,10 +898,10 @@ export default function BookingPage() {
                       {isCreatingResource ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Создание...
+                          {t("booking.creating")}
                         </>
                       ) : (
-                        "Создать"
+                        t("common.create")
                       )}
                     </button>
                   </div>
@@ -899,11 +911,11 @@ export default function BookingPage() {
                 <>
                   <div className="mb-6">
                     <h3 className="text-base font-semibold text-white mb-2">
-                      Выберите сферу деятельности вашей компании
+                      {t("booking.selectBusinessArea")}
                     </h3>
                     <p className="text-sm text-gray-400">
-                      При создании тип ресурса выберется автоматически, но вы можете его изменить.{" "}
-                      <button className="text-violet-500 hover:underline">Как настроить ресурсы</button>
+                      {t("booking.resourceTypeHint")}{" "}
+                      <button className="text-violet-500 hover:underline">{t("booking.howToConfigureResources")}</button>
                     </p>
                   </div>
 
@@ -926,8 +938,8 @@ export default function BookingPage() {
                             <Icon className="w-6 h-6" style={{ color: category.color }} />
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium text-white">{category.name}</p>
-                            <p className="text-sm text-gray-400">{category.description}</p>
+                            <p className="font-medium text-white">{t(category.nameKey)}</p>
+                            <p className="text-sm text-gray-400">{t(category.descriptionKey)}</p>
                           </div>
                           <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400" />
                         </button>
@@ -948,7 +960,7 @@ export default function BookingPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5">
               <h2 className="text-xl font-bold text-white">
-                {editingBooking ? 'Редактировать запись' : 'Новая запись'}
+                {editingBooking ? t("booking.editBooking") : t("booking.newBooking")}
               </h2>
               <button
                 onClick={() => setShowBookingModal(false)}
@@ -973,23 +985,23 @@ export default function BookingPage() {
                   {editingBooking.status === 'PENDING' && <Clock className="w-3 h-3" />}
                   {editingBooking.status === 'CONFIRMED' && <Check className="w-3 h-3" />}
                   {editingBooking.status === 'CANCELLED' && <XCircle className="w-3 h-3" />}
-                  {editingBooking.status === 'PENDING' && 'Ожидает подтверждения'}
-                  {editingBooking.status === 'CONFIRMED' && 'Подтверждено'}
-                  {editingBooking.status === 'CANCELLED' && 'Отменено'}
-                  {editingBooking.status === 'COMPLETED' && 'Завершено'}
-                  {editingBooking.status === 'NO_SHOW' && 'Неявка'}
+                  {editingBooking.status === 'PENDING' && t("booking.pendingConfirmation")}
+                  {editingBooking.status === 'CONFIRMED' && t("booking.statusConfirmed")}
+                  {editingBooking.status === 'CANCELLED' && t("booking.statusCancelled")}
+                  {editingBooking.status === 'COMPLETED' && t("booking.statusCompleted")}
+                  {editingBooking.status === 'NO_SHOW' && t("booking.noShow")}
                 </div>
               )}
 
               {/* Resource selection */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Ресурс *</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.resource")} *</label>
                 <select
                   value={bookingForm.resourceId}
                   onChange={(e) => setBookingForm({ ...bookingForm, resourceId: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10"
                 >
-                  <option value="" className="bg-gray-800">Выберите ресурс</option>
+                  <option value="" className="bg-gray-800">{t("booking.selectResource")}</option>
                   {resources.map((resource: Resource) => (
                     <option key={resource.id} value={resource.id} className="bg-gray-800">
                       {resource.name}
@@ -1000,13 +1012,13 @@ export default function BookingPage() {
 
               {/* Service selection */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Услуга</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.service")}</label>
                 <select
                   value={bookingForm.serviceId}
                   onChange={(e) => setBookingForm({ ...bookingForm, serviceId: e.target.value })}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10"
                 >
-                  <option value="" className="bg-gray-800">Без услуги</option>
+                  <option value="" className="bg-gray-800">{t("booking.noService")}</option>
                   {Array.isArray(services) && services.map((service: any) => (
                     <option key={service.id} value={service.id} className="bg-gray-800">
                       {service.name}
@@ -1017,36 +1029,36 @@ export default function BookingPage() {
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Название</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.bookingTitle")}</label>
                 <input
                   type="text"
                   value={bookingForm.title}
                   onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
-                  placeholder="Название записи"
+                  placeholder={t("booking.bookingTitlePlaceholder")}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500"
                 />
               </div>
 
               {/* Client name */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Имя клиента</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.clientName")}</label>
                 <input
                   type="text"
                   value={bookingForm.clientName}
                   onChange={(e) => setBookingForm({ ...bookingForm, clientName: e.target.value })}
-                  placeholder="Иван Иванов"
+                  placeholder={t("booking.clientNamePlaceholder")}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500"
                 />
               </div>
 
               {/* Client phone */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Телефон клиента</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.clientPhone")}</label>
                 <input
                   type="tel"
                   value={bookingForm.clientPhone}
                   onChange={(e) => setBookingForm({ ...bookingForm, clientPhone: e.target.value })}
-                  placeholder="+7 (999) 123-45-67"
+                  placeholder={t("booking.clientPhonePlaceholder")}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500"
                 />
               </div>
@@ -1054,7 +1066,7 @@ export default function BookingPage() {
               {/* Time range */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Начало *</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.startTime")} *</label>
                   <input
                     type="datetime-local"
                     value={bookingForm.startTime}
@@ -1063,7 +1075,7 @@ export default function BookingPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Окончание *</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.endTime")} *</label>
                   <input
                     type="datetime-local"
                     value={bookingForm.endTime}
@@ -1075,11 +1087,11 @@ export default function BookingPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Заметки</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">{t("booking.notes")}</label>
                 <textarea
                   value={bookingForm.notes}
                   onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
-                  placeholder="Дополнительная информация..."
+                  placeholder={t("booking.notesPlaceholder")}
                   rows={3}
                   className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500 resize-none"
                 />
@@ -1104,14 +1116,14 @@ export default function BookingPage() {
                     className="flex-1 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 font-medium rounded-xl text-sm flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
-                    Подтвердить
+                    {t("common.confirm")}
                   </button>
                   <button
                     onClick={handleCancelBooking}
                     className="flex-1 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium rounded-xl text-sm flex items-center justify-center gap-2"
                   >
                     <XCircle className="w-4 h-4" />
-                    Отменить
+                    {t("booking.cancelBooking")}
                   </button>
                 </div>
               )}
@@ -1123,14 +1135,14 @@ export default function BookingPage() {
                     className="px-4 py-2.5 text-red-400 hover:bg-red-500/10 rounded-xl font-medium text-sm flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Удалить
+                    {t("common.delete")}
                   </button>
                 )}
                 <button
                   onClick={() => setShowBookingModal(false)}
                   className="flex-1 px-4 py-2.5 text-gray-300 hover:bg-white/5 rounded-xl font-medium"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleSaveBooking}
@@ -1140,10 +1152,10 @@ export default function BookingPage() {
                   {isSavingBooking ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Сохранение...
+                      {t("common.saving")}
                     </>
                   ) : (
-                    editingBooking ? 'Сохранить' : 'Создать запись'
+                    editingBooking ? t("common.save") : t("booking.createBooking")
                   )}
                 </button>
               </div>

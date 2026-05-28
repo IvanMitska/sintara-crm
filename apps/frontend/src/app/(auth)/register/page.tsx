@@ -20,27 +20,37 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Icons } from "@/components/icons";
 import { useAuthStore } from "@/store/auth";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Mail, Lock, User, Building2 } from "lucide-react";
 
-const registerSchema = z.object({
-  email: z.string().email("Некорректный email"),
-  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-  confirmPassword: z.string(),
-  firstName: z.string().min(1, "Введите имя"),
-  lastName: z.string().min(1, "Введите фамилию"),
-  phone: z.string().optional(),
-  organizationName: z.string().min(1, "Введите название компании"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Пароли не совпадают",
-  path: ["confirmPassword"],
-});
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type RegisterFormValues = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  organizationName: string;
+};
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const register = useAuthStore((state) => state.register);
+
+  const registerSchema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(6, t("auth.passwordMin")),
+    confirmPassword: z.string(),
+    firstName: z.string().min(1, t("auth.enterFirstName")),
+    lastName: z.string().min(1, t("auth.enterLastName")),
+    phone: z.string().optional(),
+    organizationName: z.string().min(1, t("auth.enterCompanyName")),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t("auth.passwordsNoMatch"),
+    path: ["confirmPassword"],
+  });
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -68,10 +78,10 @@ export default function RegisterPage() {
         organizationName: data.organizationName,
       });
 
-      toast.success("Регистрация успешна! Ваш кабинет создан.");
+      toast.success(t("auth.registerSuccessFull"));
       router.push("/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Ошибка регистрации");
+      toast.error(error.message || t("auth.registerError"));
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +91,10 @@ export default function RegisterPage() {
     <div className="animate-stagger">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-white mb-2">
-          Создать аккаунт
+          {t("auth.createAccount")}
         </h2>
         <p className="text-gray-400">
-          Заполните форму для регистрации
+          {t("auth.registerSubtitle")}
         </p>
       </div>
 
@@ -96,12 +106,12 @@ export default function RegisterPage() {
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-300 text-sm font-medium">Имя</FormLabel>
+                  <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.firstName")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <Input
-                        placeholder="Иван"
+                        placeholder={t("auth.firstNamePlaceholder")}
                         disabled={isLoading}
                         className="pl-10 h-11 bg-white/5 border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20 transition-colors"
                         {...field}
@@ -117,12 +127,12 @@ export default function RegisterPage() {
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-300 text-sm font-medium">Фамилия</FormLabel>
+                  <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.lastName")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <Input
-                        placeholder="Иванов"
+                        placeholder={t("auth.lastNamePlaceholder")}
                         disabled={isLoading}
                         className="pl-10 h-11 bg-white/5 border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20 transition-colors"
                         {...field}
@@ -140,12 +150,12 @@ export default function RegisterPage() {
             name="organizationName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300 text-sm font-medium">Название компании</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.companyName")}</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                     <Input
-                      placeholder="ООО Моя компания"
+                      placeholder={t("auth.companyPlaceholder")}
                       disabled={isLoading}
                       className="pl-12 h-11 bg-white/5 border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:border-violet-500 focus:ring-violet-500/20 transition-colors"
                       {...field}
@@ -186,7 +196,7 @@ export default function RegisterPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-gray-300 text-sm font-medium">
-                  Телефон <span className="text-gray-500">(необязательно)</span>
+                  {t("auth.phone")} <span className="text-gray-500">({t("auth.phoneOptional")})</span>
                 </FormLabel>
                 <FormControl>
                   <PhoneInput
@@ -206,7 +216,7 @@ export default function RegisterPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300 text-sm font-medium">Пароль</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.password")}</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -229,7 +239,7 @@ export default function RegisterPage() {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300 text-sm font-medium">Подтвердите пароль</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.confirmPasswordLabel")}</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -255,7 +265,7 @@ export default function RegisterPage() {
             {isLoading ? (
               <Icons.spinner className="h-5 w-5 animate-spin" />
             ) : (
-              "Зарегистрироваться"
+              t("auth.register")
             )}
           </Button>
         </form>
@@ -263,20 +273,20 @@ export default function RegisterPage() {
 
       <div className="mt-6 text-center">
         <p className="text-gray-400">
-          Уже есть аккаунт?{" "}
+          {t("auth.haveAccount")}{" "}
           <Link
             href="/login"
             className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
           >
-            Войти
+            {t("auth.login")}
           </Link>
         </p>
       </div>
 
       <p className="mt-4 text-center text-xs text-gray-500">
-        Регистрируясь, вы соглашаетесь с{" "}
+        {t("auth.termsText")}{" "}
         <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-          условиями использования
+          {t("auth.termsLink")}
         </Link>
       </p>
     </div>

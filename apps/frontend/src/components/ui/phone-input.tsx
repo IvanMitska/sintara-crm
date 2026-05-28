@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 const countries = [
   // СНГ
@@ -90,10 +91,22 @@ export function PhoneInput({
   placeholder = "999 123-45-67",
   className,
 }: PhoneInputProps) {
+  const { language } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedCountry, setSelectedCountry] = React.useState(countries[0]);
   const [phoneNumber, setPhoneNumber] = React.useState("");
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Localize country names from their ISO codes (falls back to the static name).
+  const regionNames = React.useMemo(() => {
+    try {
+      return new Intl.DisplayNames([language], { type: "region" });
+    } catch {
+      return null;
+    }
+  }, [language]);
+  const countryName = (country: (typeof countries)[number]) =>
+    regionNames?.of(country.code) || country.name;
 
   // Parse initial value
   React.useEffect(() => {
@@ -171,7 +184,7 @@ export function PhoneInput({
               )}
             >
               <span className="text-lg">{country.flag}</span>
-              <span className="flex-1 text-sm text-white">{country.name}</span>
+              <span className="flex-1 text-sm text-white">{countryName(country)}</span>
               <span className="text-sm text-gray-500">{country.dialCode}</span>
             </button>
           ))}

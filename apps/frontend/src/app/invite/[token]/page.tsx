@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { invitationsApi } from "@/lib/api";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface InvitationData {
   id: string;
@@ -31,16 +32,17 @@ interface InvitationData {
   };
 }
 
-const roleLabels: Record<string, string> = {
-  ADMIN: "Администратор",
-  SUPERVISOR: "Супервайзер",
-  MANAGER: "Менеджер",
-  OPERATOR: "Оператор",
+const roleLabelKeys: Record<string, string> = {
+  ADMIN: "roles.admin",
+  SUPERVISOR: "roles.supervisor",
+  MANAGER: "roles.manager",
+  OPERATOR: "roles.operator",
 };
 
 export default function InvitePage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const token = params.token as string;
 
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
@@ -65,7 +67,7 @@ export default function InvitePage() {
         const response = await invitationsApi.getByToken(token);
         setInvitation(response.data);
       } catch (err: any) {
-        setError(err.response?.data?.message || "Приглашение не найдено или недействительно");
+        setError(err.response?.data?.message || t("invite.invalidDefault"));
       } finally {
         setLoading(false);
       }
@@ -80,18 +82,18 @@ export default function InvitePage() {
     const errors: Record<string, string> = {};
 
     if (!firstName.trim()) {
-      errors.firstName = "Введите имя";
+      errors.firstName = t("auth.enterFirstName");
     }
     if (!lastName.trim()) {
-      errors.lastName = "Введите фамилию";
+      errors.lastName = t("auth.enterLastName");
     }
     if (!password) {
-      errors.password = "Введите пароль";
+      errors.password = t("invite.enterPassword");
     } else if (password.length < 6) {
-      errors.password = "Пароль должен содержать минимум 6 символов";
+      errors.password = t("auth.passwordMin");
     }
     if (password !== confirmPassword) {
-      errors.confirmPassword = "Пароли не совпадают";
+      errors.confirmPassword = t("auth.passwordsNoMatch");
     }
 
     setValidationErrors(errors);
@@ -117,7 +119,7 @@ export default function InvitePage() {
         router.push("/login");
       }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Ошибка при регистрации");
+      setError(err.response?.data?.message || t("invite.registerError"));
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +130,7 @@ export default function InvitePage() {
       <div className="min-h-screen bg-[#0B0E14] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-          <p className="text-gray-400">Загрузка приглашения...</p>
+          <p className="text-gray-400">{t("invite.loadingInvitation")}</p>
         </div>
       </div>
     );
@@ -141,13 +143,13 @@ export default function InvitePage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
             <XCircle className="w-10 h-10 text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Приглашение недействительно</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t("invite.invalidTitle")}</h1>
           <p className="text-gray-400 mb-6">{error}</p>
           <Link
             href="/login"
             className="inline-flex items-center gap-2 px-6 py-3 bg-violet-500 text-white rounded-xl font-medium hover:bg-purple-500"
           >
-            Перейти к входу
+            {t("invite.goToLogin")}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -166,13 +168,13 @@ export default function InvitePage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/20 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Регистрация успешна!</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t("invite.successTitle")}</h1>
           <p className="text-gray-400 mb-6">
-            Ваш аккаунт создан. Сейчас вы будете перенаправлены на страницу входа...
+            {t("invite.successDesc")}
           </p>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Перенаправление...
+            {t("auth.redirecting")}
           </div>
         </motion.div>
       </div>
@@ -204,9 +206,9 @@ export default function InvitePage() {
             />
             <span className="text-2xl font-bold text-white">Sintara CRM</span>
           </div>
-          <h1 className="text-xl font-semibold text-white">Завершите регистрацию</h1>
+          <h1 className="text-xl font-semibold text-white">{t("invite.finishRegistration")}</h1>
           <p className="text-gray-400 mt-2">
-            Вас пригласил {invitation?.invitedBy.firstName} {invitation?.invitedBy.lastName}
+            {t("invite.invitedBy", { name: `${invitation?.invitedBy.firstName ?? ""} ${invitation?.invitedBy.lastName ?? ""}`.trim() })}
           </p>
         </div>
 
@@ -221,7 +223,7 @@ export default function InvitePage() {
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-violet-400" />
               <span className="text-gray-400">
-                Роль: <span className="text-white">{roleLabels[invitation?.role || ""] || invitation?.role}</span>
+                {t("invite.roleLabel")} <span className="text-white">{invitation?.role ? t(roleLabelKeys[invitation.role] || "") || invitation.role : invitation?.role}</span>
               </span>
             </div>
           </div>
@@ -235,14 +237,14 @@ export default function InvitePage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* First Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Имя</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t("auth.firstName")}</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Иван"
+                  placeholder={t("auth.firstNamePlaceholder")}
                   className={`w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-white border ${
                     validationErrors.firstName ? "border-red-500" : "border-white/10"
                   } focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-gray-500`}
@@ -255,14 +257,14 @@ export default function InvitePage() {
 
             {/* Last Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Фамилия</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t("auth.lastName")}</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Петров"
+                  placeholder={t("invite.lastNamePlaceholder")}
                   className={`w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-white border ${
                     validationErrors.lastName ? "border-red-500" : "border-white/10"
                   } focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-gray-500`}
@@ -276,7 +278,7 @@ export default function InvitePage() {
             {/* Phone (optional) */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Телефон <span className="text-gray-500">(необязательно)</span>
+                {t("auth.phone")} <span className="text-gray-500">({t("auth.phoneOptional")})</span>
               </label>
               <PhoneInput
                 value={phone}
@@ -287,14 +289,14 @@ export default function InvitePage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Пароль</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t("auth.password")}</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Минимум 6 символов"
+                  placeholder={t("auth.minSixChars")}
                   className={`w-full pl-12 pr-12 py-3 bg-white/5 rounded-xl text-white border ${
                     validationErrors.password ? "border-red-500" : "border-white/10"
                   } focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-gray-500`}
@@ -314,14 +316,14 @@ export default function InvitePage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Подтвердите пароль</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">{t("auth.confirmPasswordLabel")}</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Повторите пароль"
+                  placeholder={t("auth.repeatPassword")}
                   className={`w-full pl-12 pr-12 py-3 bg-white/5 rounded-xl text-white border ${
                     validationErrors.confirmPassword ? "border-red-500" : "border-white/10"
                   } focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 placeholder:text-gray-500`}
@@ -348,11 +350,11 @@ export default function InvitePage() {
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Регистрация...
+                  {t("auth.registering")}
                 </>
               ) : (
                 <>
-                  Завершить регистрацию
+                  {t("invite.completeRegistration")}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -361,9 +363,9 @@ export default function InvitePage() {
 
           <div className="mt-6 text-center">
             <p className="text-gray-400 text-sm">
-              Уже есть аккаунт?{" "}
+              {t("auth.haveAccount")}{" "}
               <Link href="/login" className="text-violet-400 hover:underline">
-                Войти
+                {t("auth.login")}
               </Link>
             </p>
           </div>

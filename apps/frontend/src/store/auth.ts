@@ -10,6 +10,7 @@ interface User {
   middleName?: string;
   role: string;
   avatar?: string;
+  language?: string;
 }
 
 interface Organization {

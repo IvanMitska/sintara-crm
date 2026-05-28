@@ -53,6 +53,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { PipelineManagerModal } from "@/components/pipelines/PipelineManagerModal";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 
 type DealTemperature = "HOT" | "WARM" | "COLD";
 type DealPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -86,20 +87,21 @@ type QuickFilter = "all" | "my" | "overdue" | "no-tasks" | "hot";
 // Temperature indicator component
 const TEMPERATURE_CONFIG: Record<
   DealTemperature,
-  { icon: any; color: string; bg: string; label: string }
+  { icon: any; color: string; bg: string; labelKey: string }
 > = {
-  HOT: { icon: Flame, color: "text-red-500", bg: "bg-red-500/20", label: "Горячая" },
-  WARM: { icon: Thermometer, color: "text-amber-500", bg: "bg-amber-500/20", label: "Тёплая" },
-  COLD: { icon: Snowflake, color: "text-blue-500", bg: "bg-blue-500/20", label: "Холодная" },
+  HOT: { icon: Flame, color: "text-red-500", bg: "bg-red-500/20", labelKey: "deals.hot" },
+  WARM: { icon: Thermometer, color: "text-amber-500", bg: "bg-amber-500/20", labelKey: "deals.warm" },
+  COLD: { icon: Snowflake, color: "text-blue-500", bg: "bg-blue-500/20", labelKey: "deals.cold" },
 };
 
 function TemperatureIndicator({ temperature }: { temperature?: DealTemperature | null }) {
+  const { t } = useTranslation();
   if (!temperature) return null;
   const cfg = TEMPERATURE_CONFIG[temperature];
   if (!cfg) return null;
   const Icon = cfg.icon;
   return (
-    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", cfg.bg)} title={cfg.label}>
+    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center", cfg.bg)} title={t(cfg.labelKey)}>
       <Icon className={cn("w-3.5 h-3.5", cfg.color)} />
     </div>
   );
@@ -136,6 +138,7 @@ function DealCard({
 }) {
   const [showActions, setShowActions] = useState(false);
   const { formatCompact } = useCurrency();
+  const { t } = useTranslation();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -174,8 +177,8 @@ function DealCard({
               className="w-6 h-6 rounded-lg bg-red-500/20 flex items-center justify-center"
               title={
                 deal.overdueTasksCount && deal.overdueTasksCount > 1
-                  ? `${deal.overdueTasksCount} просроченных задач`
-                  : "Просроченная задача"
+                  ? t("deals.overdueTasks", { count: deal.overdueTasksCount })
+                  : t("deals.overdueTaskSingle")
               }
             >
               <AlertCircle className="w-3.5 h-3.5 text-red-500" />
@@ -232,10 +235,10 @@ function DealCard({
                 "flex items-center gap-1 text-xs",
                 lastActivityDays > 7 ? "text-red-500" : lastActivityDays > 3 ? "text-amber-500" : "text-gray-500"
               )}
-              title="Дней с последней активности"
+              title={t("deals.daysSinceActivity")}
             >
               <Clock className="w-3 h-3" />
-              <span>{lastActivityDays}д</span>
+              <span>{t("deals.daysShort", { count: lastActivityDays })}</span>
             </div>
           )}
         </div>
@@ -256,21 +259,21 @@ function DealCard({
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium"
         >
           <Phone className="w-3.5 h-3.5" />
-          Позвонить
+          {t("deals.actionCall")}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onQuickAction("task", deal); }}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 text-xs font-medium"
         >
           <CheckSquare className="w-3.5 h-3.5" />
-          Задача
+          {t("deals.actionTask")}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onQuickAction("message", deal); }}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 text-xs font-medium"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          Написать
+          {t("deals.actionMessage")}
         </button>
       </div>
     </div>
@@ -319,9 +322,10 @@ function KanbanColumn({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const stageTotal = deals.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
   const { formatCompact } = useCurrency();
+  const { t } = useTranslation();
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
-  const emptyMessage = "Перетащите сделку сюда или создайте новую";
+  const emptyMessage = t("deals.dropHere");
 
   return (
     <div className={cn(
@@ -367,7 +371,7 @@ function KanbanColumn({
           <div className="flex items-center gap-4 bg-white/5 rounded-xl px-4 py-3">
             <div>
               <span className="text-2xl font-bold text-white">{deals.length}</span>
-              <span className="text-sm text-gray-400 ml-1">сделок</span>
+              <span className="text-sm text-gray-400 ml-1">{t("deals.dealsCountLabel")}</span>
             </div>
             <div className="w-px h-8 bg-white/10" />
             <div>
@@ -420,7 +424,7 @@ function KanbanColumn({
                 className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-xl text-sm font-medium hover:bg-violet-600"
               >
                 <Plus className="w-4 h-4" />
-                Добавить сделку
+                {t("deals.addDeal")}
               </button>
             </div>
           )}
@@ -450,6 +454,7 @@ function DealDetailModal({
 }) {
   const [activeTab, setActiveTab] = useState<"info" | "tasks" | "history">("info");
   const { format } = useCurrency();
+  const { t } = useTranslation();
 
   if (!isOpen || !deal) return null;
 
@@ -458,7 +463,7 @@ function DealDetailModal({
   const progressPercent = stages.length > 0 ? ((currentStageIndex + 1) / stages.length) * 100 : 0;
 
   // Mock data
-  const mockAssignee = deal.assignee || { name: "Иван Менеджеров" };
+  const mockAssignee = deal.assignee || { name: t("deals.sampleManagerName") };
   const mockPhone = "+7 (999) 123-45-67";
   const mockEmail = "client@company.ru";
 
@@ -506,7 +511,7 @@ function DealDetailModal({
           {/* Stage progress bar */}
           <div className="mt-4">
             <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-              <span>Прогресс воронки</span>
+              <span>{t("deals.funnelProgress")}</span>
               <span>{Math.round(progressPercent)}%</span>
             </div>
             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -538,7 +543,7 @@ function DealDetailModal({
         <div className="px-6 py-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Сумма сделки</p>
+              <p className="text-sm text-gray-400 mb-1">{t("deals.dealAmount")}</p>
               <p className="text-4xl font-bold text-white">
                 {format(deal.amount)}
               </p>
@@ -547,14 +552,14 @@ function DealDetailModal({
               <button
                 onClick={() => onEdit?.(deal)}
                 className="p-3 glass-card rounded-xl hover:bg-white/5"
-                title="Редактировать"
+                title={t("common.edit")}
               >
                 <Edit className="w-5 h-5 text-gray-400" />
               </button>
               <button
                 onClick={() => onDelete?.(deal)}
                 className="p-3 glass-card rounded-xl hover:bg-red-500/10"
-                title="Удалить"
+                title={t("common.delete")}
               >
                 <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-500" />
               </button>
@@ -570,21 +575,21 @@ function DealDetailModal({
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600"
             >
               <Phone className="w-5 h-5" />
-              Позвонить
+              {t("deals.actionCall")}
             </button>
             <button
               onClick={() => onQuickAction?.("task", deal)}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-violet-500 text-white font-medium hover:bg-violet-600"
             >
               <CheckSquare className="w-5 h-5" />
-              Добавить задачу
+              {t("deals.addTask")}
             </button>
             <button
               onClick={() => onQuickAction?.("message", deal)}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-500 text-white font-medium hover:bg-purple-600"
             >
               <Mail className="w-5 h-5" />
-              Написать
+              {t("deals.actionMessage")}
             </button>
           </div>
         </div>
@@ -593,9 +598,9 @@ function DealDetailModal({
         <div className="px-6 border-b border-white/10">
           <div className="flex gap-1">
             {[
-              { id: "info", label: "Информация" },
-              { id: "tasks", label: "Задачи" },
-              { id: "history", label: "История" },
+              { id: "info", label: t("deals.tabInfo") },
+              { id: "tasks", label: t("deals.tabTasks") },
+              { id: "history", label: t("deals.tabHistory") },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -621,25 +626,25 @@ function DealDetailModal({
               <div className="glass-card rounded-2xl p-5">
                 <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-gray-500" />
-                  Контакт
+                  {t("common.contact")}
                 </h3>
                 <div className="space-y-3">
                   {deal.contact && (
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Имя</span>
+                      <span className="text-gray-400">{t("common.name")}</span>
                       <span className="font-medium text-white">
                         {deal.contact.firstName} {deal.contact.lastName}
                       </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Телефон</span>
+                    <span className="text-gray-400">{t("common.phone")}</span>
                     <a href={`tel:${mockPhone}`} className="font-medium text-violet-400 hover:underline">
                       {mockPhone}
                     </a>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Email</span>
+                    <span className="text-gray-400">{t("common.email")}</span>
                     <a href={`mailto:${mockEmail}`} className="font-medium text-violet-400 hover:underline">
                       {mockEmail}
                     </a>
@@ -651,18 +656,18 @@ function DealDetailModal({
               <div className="glass-card rounded-2xl p-5">
                 <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                   <Briefcase className="w-5 h-5 text-gray-500" />
-                  Сделка
+                  {t("deals.dealSingular")}
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Ответственный</span>
+                    <span className="text-gray-400">{t("deals.responsible")}</span>
                     <div className="flex items-center gap-2">
                       <ManagerAvatar name={mockAssignee.name} size="sm" />
                       <span className="font-medium text-white">{mockAssignee.name}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Создана</span>
+                    <span className="text-gray-400">{t("common.createdAt")}</span>
                     <span className="font-medium text-white">
                       {new Date(deal.createdAt).toLocaleDateString("ru-RU", {
                         day: "numeric",
@@ -672,7 +677,7 @@ function DealDetailModal({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Обновлена</span>
+                    <span className="text-gray-400">{t("common.updatedAt")}</span>
                     <span className="font-medium text-white">
                       {new Date(deal.updatedAt).toLocaleDateString("ru-RU", {
                         day: "numeric",
@@ -689,10 +694,10 @@ function DealDetailModal({
                 <div className="glass-card rounded-2xl p-5">
                   <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-gray-500" />
-                    Компания
+                    {t("common.company")}
                   </h3>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Название</span>
+                    <span className="text-gray-400">{t("deals.titleField")}</span>
                     <span className="font-medium text-white">{deal.company.name}</span>
                   </div>
                 </div>
@@ -707,8 +712,8 @@ function DealDetailModal({
                   <AlertCircle className="w-5 h-5 text-red-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-white">Отправить КП</p>
-                  <p className="text-sm text-red-500">Просрочено: вчера</p>
+                  <p className="font-medium text-white">{t("deals.sampleTaskSendProposal")}</p>
+                  <p className="text-sm text-red-500">{t("deals.sampleOverdueYesterday")}</p>
                 </div>
                 <button className="p-2 hover:bg-red-500/20 rounded-xl">
                   <CheckSquare className="w-5 h-5 text-gray-500" />
@@ -720,8 +725,8 @@ function DealDetailModal({
                   <Clock className="w-5 h-5 text-amber-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-white">Позвонить клиенту</p>
-                  <p className="text-sm text-amber-500">Сегодня, 15:00</p>
+                  <p className="font-medium text-white">{t("deals.sampleTaskCallClient")}</p>
+                  <p className="text-sm text-amber-500">{t("deals.sampleToday1500")}</p>
                 </div>
                 <button className="p-2 hover:bg-amber-500/20 rounded-xl">
                   <CheckSquare className="w-5 h-5 text-gray-500" />
@@ -733,14 +738,14 @@ function DealDetailModal({
                   <CheckSquare className="w-5 h-5 text-green-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-white line-through opacity-60">Первичный контакт</p>
-                  <p className="text-sm text-green-500">Выполнено 2 дня назад</p>
+                  <p className="font-medium text-white line-through opacity-60">{t("deals.sampleTaskFirstContact")}</p>
+                  <p className="text-sm text-green-500">{t("deals.sampleDone2DaysAgo")}</p>
                 </div>
               </div>
 
               <button className="w-full py-3 border-2 border-dashed border-white/10 rounded-2xl text-gray-400 hover:border-violet-500/30 hover:text-violet-400 flex items-center justify-center gap-2">
                 <Plus className="w-5 h-5" />
-                Добавить задачу
+                {t("deals.addTask")}
               </button>
             </div>
           )}
@@ -748,10 +753,10 @@ function DealDetailModal({
           {activeTab === "history" && (
             <div className="space-y-4">
               {[
-                { action: "Сделка перемещена в этап", detail: deal.stage.name, time: "Сегодня, 14:30", color: "violet" },
-                { action: "Добавлен комментарий", detail: "Клиент заинтересован", time: "Вчера, 16:45", color: "gray" },
-                { action: "Звонок клиенту", detail: "Длительность: 5 мин", time: "Вчера, 10:15", color: "green" },
-                { action: "Сделка создана", detail: "", time: new Date(deal.createdAt).toLocaleDateString("ru-RU"), color: "purple" },
+                { action: t("deals.sampleHistoryMovedStage"), detail: deal.stage.name, time: t("deals.sampleTodayTime"), color: "violet" },
+                { action: t("deals.sampleHistoryCommentAdded"), detail: t("deals.sampleHistoryClientInterested"), time: t("deals.sampleYesterday1645"), color: "gray" },
+                { action: t("deals.sampleHistoryCallClient"), detail: t("deals.sampleHistoryDuration5min"), time: t("deals.sampleYesterdayTime"), color: "green" },
+                { action: t("deals.historyDealCreated"), detail: "", time: new Date(deal.createdAt).toLocaleDateString("ru-RU"), color: "purple" },
               ].map((item, i) => (
                 <div key={i} className="flex gap-4">
                   <div className={cn(
@@ -782,6 +787,7 @@ export default function DealsPage() {
   const [contactOptions, setContactOptions] = useState<{ id: string; name: string }[]>([]);
   const [companyOptions, setCompanyOptions] = useState<{ id: string; name: string }[]>([]);
   const { formatCompact, format } = useCurrency();
+  const { t } = useTranslation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStage] = useState<string | null>(null);
@@ -851,7 +857,7 @@ export default function DealsPage() {
       await dealsApi.move(dealId, newStageId);
     } catch (e: any) {
       setDeals(prev);
-      toast.error(e?.response?.data?.message || "Не удалось переместить сделку");
+      toast.error(e?.response?.data?.message || t("deals.moveError"));
     }
   };
 
@@ -896,29 +902,17 @@ export default function DealsPage() {
     setFilterOnlyOverdue(false);
   };
 
-  const pluralDeal = (n: number) => {
+  const pluralForm = (n: number): "One" | "Few" | "Many" => {
     const mod10 = n % 10;
     const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return "сделку";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "сделки";
-    return "сделок";
+    if (mod10 === 1 && mod100 !== 11) return "One";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "Few";
+    return "Many";
   };
 
-  const pluralStages = (n: number) => {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return "стадия";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "стадии";
-    return "стадий";
-  };
-
-  const pluralPipelines = (n: number) => {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return "воронка";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "воронки";
-    return "воронок";
-  };
+  const pluralDeal = (n: number) => t(`deals.pluralDeal${pluralForm(n)}`);
+  const pluralStages = (n: number) => t(`deals.pluralStage${pluralForm(n)}`);
+  const pluralPipelines = (n: number) => t(`deals.pluralPipeline${pluralForm(n)}`);
 
   const refreshPipelines = async () => {
     try {
@@ -1036,19 +1030,19 @@ export default function DealsPage() {
   const handleQuickAction = async (action: string, deal: Deal) => {
     if (action === "call") {
       if (!deal.contact?.id) {
-        toast.error("У сделки нет привязанного контакта");
+        toast.error(t("deals.noLinkedContact"));
         return;
       }
       try {
         const res = await contactsApi.getById(deal.contact.id);
         const phone = res.data?.phone;
         if (!phone) {
-          toast.error("У контакта не указан телефон");
+          toast.error(t("deals.contactNoPhone"));
           return;
         }
         window.location.href = `tel:${phone}`;
       } catch {
-        toast.error("Не удалось получить номер телефона");
+        toast.error(t("deals.phoneFetchError"));
       }
       return;
     }
@@ -1064,7 +1058,7 @@ export default function DealsPage() {
 
     if (action === "message") {
       if (!deal.contact?.id) {
-        toast.error("У сделки нет привязанного контакта");
+        toast.error(t("deals.noLinkedContact"));
         return;
       }
       router.push(`/messages?contactId=${deal.contact.id}`);
@@ -1085,11 +1079,11 @@ export default function DealsPage() {
       };
       Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
       await tasksApi.create(payload);
-      toast.success("Задача создана");
+      toast.success(t("tasks.createSuccess"));
       setIsTaskDialogOpen(false);
       setTaskDialogPrefill(null);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось создать задачу");
+      toast.error(e.response?.data?.message || t("deals.taskCreateError"));
     }
   };
 
@@ -1174,7 +1168,7 @@ export default function DealsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">Сделки</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">{t("deals.title")}</h1>
 
               {/* Pipeline switcher */}
               <div className="relative">
@@ -1192,7 +1186,7 @@ export default function DealsPage() {
                   >
                     <Briefcase className="w-3 h-3 text-white" />
                   </div>
-                  <span className="truncate font-medium">{currentPipeline?.name || "Без воронки"}</span>
+                  <span className="truncate font-medium">{currentPipeline?.name || t("deals.noPipeline")}</span>
                   {currentPipeline?.isDefault && (
                     <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 flex-shrink-0" />
                   )}
@@ -1207,7 +1201,7 @@ export default function DealsPage() {
                     {/* Header */}
                     <div className="relative flex items-center justify-between px-4 pt-4 pb-3 border-b border-white/5">
                       <div>
-                        <h3 className="text-sm font-bold text-white">Воронки продаж</h3>
+                        <h3 className="text-sm font-bold text-white">{t("deals.pipelines")}</h3>
                         <p className="text-[11px] text-gray-500 mt-0.5">
                           {pipelines.length} {pluralPipelines(pipelines.length)}
                         </p>
@@ -1219,7 +1213,7 @@ export default function DealsPage() {
                           setIsPipelineManagerOpen(true);
                         }}
                         className="p-1.5 rounded-lg bg-violet-500/15 text-violet-400 hover:bg-violet-500/25"
-                        title="Создать воронку"
+                        title={t("deals.createPipeline")}
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -1260,7 +1254,7 @@ export default function DealsPage() {
                                 {p.isDefault && (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 text-[10px] font-bold uppercase tracking-wide flex-shrink-0">
                                     <Star className="w-2.5 h-2.5 fill-amber-400" />
-                                    По умолчанию
+                                    {t("deals.default")}
                                   </span>
                                 )}
                               </div>
@@ -1291,8 +1285,8 @@ export default function DealsPage() {
                           <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
                             <Briefcase className="w-5 h-5 text-gray-500" />
                           </div>
-                          <p className="text-sm text-gray-400">Воронок пока нет</p>
-                          <p className="text-xs text-gray-600 mt-1">Создайте первую через «+»</p>
+                          <p className="text-sm text-gray-400">{t("deals.noPipelinesYet")}</p>
+                          <p className="text-xs text-gray-600 mt-1">{t("deals.createFirstPipeline")}</p>
                         </div>
                       )}
                     </div>
@@ -1309,7 +1303,7 @@ export default function DealsPage() {
                       >
                         <div className="flex items-center gap-2.5">
                           <Settings className="w-4 h-4 text-violet-400" />
-                          <span className="font-medium">Управление воронками</span>
+                          <span className="font-medium">{t("deals.managePipelines")}</span>
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />
                       </button>
@@ -1322,15 +1316,15 @@ export default function DealsPage() {
             {/* Stats Pills - hidden on mobile */}
             <div className="hidden lg:flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
-                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm text-gray-400">{t("deals.total")}</span>
                 <span className="text-sm font-bold text-white">{deals.length}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
-                <span className="text-sm text-green-300">Сумма</span>
+                <span className="text-sm text-green-300">{t("deals.amount")}</span>
                 <span className="text-sm font-bold text-green-300">{formatCompact(totalAmount)}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-lg">
-                <span className="text-sm text-purple-300">Средний чек</span>
+                <span className="text-sm text-purple-300">{t("deals.avgCheck")}</span>
                 <span className="text-sm font-bold text-purple-300">{formatCompact(avgDealSize)}</span>
               </div>
             </div>
@@ -1340,18 +1334,18 @@ export default function DealsPage() {
             className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-violet-600 shadow-sm"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Новая сделка</span>
+            <span className="hidden sm:inline">{t("deals.newDeal")}</span>
           </button>
         </div>
 
         {/* Quick Filters */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { id: "all" as QuickFilter, label: "Все сделки", icon: Briefcase },
-            { id: "my" as QuickFilter, label: "Мои сделки", icon: User },
-            { id: "hot" as QuickFilter, label: "Горячие", icon: Flame },
-            { id: "overdue" as QuickFilter, label: "Просроченные", icon: AlertCircle },
-            { id: "no-tasks" as QuickFilter, label: "Без задач", icon: CheckSquare },
+            { id: "all" as QuickFilter, label: t("deals.filterAll"), icon: Briefcase },
+            { id: "my" as QuickFilter, label: t("deals.filterMine"), icon: User },
+            { id: "hot" as QuickFilter, label: t("deals.filterHot"), icon: Flame },
+            { id: "overdue" as QuickFilter, label: t("deals.filterOverdue"), icon: AlertCircle },
+            { id: "no-tasks" as QuickFilter, label: t("deals.filterNoTasks"), icon: CheckSquare },
           ].map((filter) => (
             <button
               key={filter.id}
@@ -1375,7 +1369,7 @@ export default function DealsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="search"
-              placeholder="Поиск сделок..."
+              placeholder={t("deals.searchDeals")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 glass-card rounded-2xl border-0 text-white placeholder-gray-500 focus:ring-2 focus:ring-violet-500/50"
@@ -1390,7 +1384,7 @@ export default function DealsPage() {
             )}
           >
             <SlidersHorizontal className="w-5 h-5 text-gray-400" />
-            <span className="hidden sm:inline text-gray-300 font-medium">Фильтры</span>
+            <span className="hidden sm:inline text-gray-300 font-medium">{t("deals.filters")}</span>
             {activeFilterCount > 0 && (
               <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-violet-500 text-white text-xs font-bold flex items-center justify-center">
                 {activeFilterCount}
@@ -1410,7 +1404,7 @@ export default function DealsPage() {
               )}
             >
               <LayoutGrid className="w-4 h-4" />
-              <span className="hidden sm:inline">Канбан</span>
+              <span className="hidden sm:inline">{t("deals.viewKanban")}</span>
             </button>
             <button
               onClick={() => setViewMode("list")}
@@ -1422,7 +1416,7 @@ export default function DealsPage() {
               )}
             >
               <List className="w-4 h-4" />
-              <span className="hidden sm:inline">Список</span>
+              <span className="hidden sm:inline">{t("deals.viewList")}</span>
             </button>
           </div>
         </div>
@@ -1434,16 +1428,16 @@ export default function DealsPage() {
               <div className="w-16 h-16 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto mb-4">
                 <Settings className="w-7 h-7 text-violet-400" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">В этой воронке пока нет стадий</h3>
+              <h3 className="text-lg font-bold text-white mb-1">{t("deals.noStagesInPipeline")}</h3>
               <p className="text-sm text-gray-400 mb-5 max-w-md mx-auto">
-                Добавьте стадии, чтобы начать вести сделки. Каждая стадия — отдельная колонка канбана.
+                {t("deals.noStagesInPipelineDesc")}
               </p>
               <button
                 onClick={() => setIsPipelineManagerOpen(true)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-xl text-sm font-semibold"
               >
                 <Plus className="w-4 h-4" />
-                Настроить стадии
+                {t("deals.configureStages")}
               </button>
             </div>
           ) : (
@@ -1486,22 +1480,22 @@ export default function DealsPage() {
                 <thead>
                   <tr className="border-b border-white/5">
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Сделка
+                      {t("deals.dealSingular")}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Сумма
+                      {t("deals.amount")}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Этап
+                      {t("deals.stage")}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Компания
+                      {t("common.company")}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Ответственный
+                      {t("deals.responsible")}
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Дата
+                      {t("deals.date")}
                     </th>
                   </tr>
                 </thead>
@@ -1543,8 +1537,8 @@ export default function DealsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <ManagerAvatar name="Иван М." size="sm" />
-                          <span className="text-gray-300">Иван М.</span>
+                          <ManagerAvatar name={t("deals.sampleManagerShort")} size="sm" />
+                          <span className="text-gray-300">{t("deals.sampleManagerShort")}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-gray-500 text-sm">
@@ -1558,7 +1552,7 @@ export default function DealsPage() {
               {filteredDeals.length === 0 && (
                 <div className="text-center py-12">
                   <Briefcase className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                  <p className="text-gray-400">Сделки не найдены</p>
+                  <p className="text-gray-400">{t("deals.noDealsFound")}</p>
                 </div>
               )}
             </div>
@@ -1597,10 +1591,10 @@ export default function DealsPage() {
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-        title="Удалить сделку?"
-        description={`Вы уверены, что хотите удалить сделку "${deletingDeal?.title}"? Это действие нельзя отменить.`}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("deals.deleteConfirm")}
+        description={t("deals.deleteConfirmDescNamed", { title: deletingDeal?.title ?? "" })}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={isDeleting}
       />
@@ -1646,16 +1640,16 @@ export default function DealsPage() {
                   <SlidersHorizontal className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white leading-tight">Фильтры</h2>
+                  <h2 className="text-base font-bold text-white leading-tight">{t("deals.filters")}</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {activeFilterCount > 0 ? `${activeFilterCount} активных` : "Не выбраны"}
+                    {activeFilterCount > 0 ? t("deals.activeFiltersCount", { count: activeFilterCount }) : t("deals.noFiltersSelected")}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsFiltersOpen(false)}
                 className="p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white"
-                aria-label="Закрыть фильтры"
+                aria-label={t("deals.closeFilters")}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1666,13 +1660,13 @@ export default function DealsPage() {
               {/* Stages section */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Стадия</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("deals.stage")}</h3>
                   {filterStageIds.size > 0 && (
                     <button
                       onClick={() => setFilterStageIds(new Set())}
                       className="text-[11px] text-violet-400 hover:text-violet-300 font-semibold"
                     >
-                      Очистить
+                      {t("deals.clear")}
                     </button>
                   )}
                 </div>
@@ -1715,41 +1709,41 @@ export default function DealsPage() {
                     );
                   })}
                   {stages.length === 0 && (
-                    <p className="text-sm text-gray-500 px-3 py-2">Нет стадий в воронке</p>
+                    <p className="text-sm text-gray-500 px-3 py-2">{t("deals.noStagesInFunnel")}</p>
                   )}
                 </div>
               </div>
 
               {/* Temperature section */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Температура</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">{t("deals.temperature")}</h3>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "HOT" as DealTemperature, label: "Горячие", icon: Flame, color: "text-red-400 bg-red-500/15 border-red-500/40 shadow-red-500/20" },
-                    { id: "WARM" as DealTemperature, label: "Тёплые", icon: Thermometer, color: "text-amber-400 bg-amber-500/15 border-amber-500/40 shadow-amber-500/20" },
-                    { id: "COLD" as DealTemperature, label: "Холодные", icon: Snowflake, color: "text-blue-400 bg-blue-500/15 border-blue-500/40 shadow-blue-500/20" },
-                  ].map((t) => {
-                    const active = filterTemperatures.has(t.id);
-                    const Icon = t.icon;
+                    { id: "HOT" as DealTemperature, label: t("deals.filterHot"), icon: Flame, color: "text-red-400 bg-red-500/15 border-red-500/40 shadow-red-500/20" },
+                    { id: "WARM" as DealTemperature, label: t("deals.filterWarm"), icon: Thermometer, color: "text-amber-400 bg-amber-500/15 border-amber-500/40 shadow-amber-500/20" },
+                    { id: "COLD" as DealTemperature, label: t("deals.filterCold"), icon: Snowflake, color: "text-blue-400 bg-blue-500/15 border-blue-500/40 shadow-blue-500/20" },
+                  ].map((temp) => {
+                    const active = filterTemperatures.has(temp.id);
+                    const Icon = temp.icon;
                     return (
                       <button
-                        key={t.id}
+                        key={temp.id}
                         type="button"
                         onClick={() => {
                           const next = new Set(filterTemperatures);
-                          if (active) next.delete(t.id);
-                          else next.add(t.id);
+                          if (active) next.delete(temp.id);
+                          else next.add(temp.id);
                           setFilterTemperatures(next);
                         }}
                         className={cn(
                           "flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-xs font-semibold border",
                           active
-                            ? `${t.color} shadow-lg`
+                            ? `${temp.color} shadow-lg`
                             : "text-gray-400 bg-white/[0.02] border-white/10 hover:bg-white/5 hover:text-gray-300"
                         )}
                       >
                         <Icon className="w-5 h-5" />
-                        {t.label}
+                        {temp.label}
                       </button>
                     );
                   })}
@@ -1758,10 +1752,10 @@ export default function DealsPage() {
 
               {/* Amount section */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Сумма сделки</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">{t("deals.dealAmount")}</h3>
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">От</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">{t("deals.filterFrom")}</span>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -1773,7 +1767,7 @@ export default function DealsPage() {
                   </div>
                   <span className="text-gray-600">—</span>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">До</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 uppercase">{t("deals.filterTo")}</span>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -1788,7 +1782,7 @@ export default function DealsPage() {
 
               {/* Date section */}
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">Дата создания</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">{t("deals.creationDate")}</h3>
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                   <input
                     type="date"
@@ -1806,13 +1800,13 @@ export default function DealsPage() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {[
-                    { label: "Сегодня", days: 0 },
-                    { label: "7 дней", days: 7 },
-                    { label: "30 дней", days: 30 },
-                    { label: "90 дней", days: 90 },
+                    { labelKey: "deals.presetToday", days: 0 },
+                    { labelKey: "deals.preset7Days", days: 7 },
+                    { labelKey: "deals.preset30Days", days: 30 },
+                    { labelKey: "deals.preset90Days", days: 90 },
                   ].map((preset) => (
                     <button
-                      key={preset.label}
+                      key={preset.labelKey}
                       type="button"
                       onClick={() => {
                         const to = new Date();
@@ -1824,7 +1818,7 @@ export default function DealsPage() {
                       }}
                       className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-300"
                     >
-                      {preset.label}
+                      {t(preset.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -1851,8 +1845,8 @@ export default function DealsPage() {
                     <AlertCircle className="w-5 h-5 text-red-400" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white">Только просроченные</div>
-                    <div className="text-xs text-gray-500 truncate">С активными просроченными задачами</div>
+                    <div className="text-sm font-semibold text-white">{t("deals.onlyOverdue")}</div>
+                    <div className="text-xs text-gray-500 truncate">{t("deals.onlyOverdueDesc")}</div>
                   </div>
                 </div>
                 <div
@@ -1878,13 +1872,13 @@ export default function DealsPage() {
                 disabled={!hasActiveFilters}
                 className="px-4 py-3 rounded-xl border border-white/10 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
               >
-                Сбросить
+                {t("common.reset")}
               </button>
               <button
                 onClick={() => setIsFiltersOpen(false)}
                 className="flex-1 px-5 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-violet-500/30"
               >
-                Показать {filteredDeals.length} {pluralDeal(filteredDeals.length)}
+                {t("deals.showCount", { count: filteredDeals.length })} {pluralDeal(filteredDeals.length)}
               </button>
             </div>
           </div>

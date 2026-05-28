@@ -22,6 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Plus, Clock, PlayCircle, CheckCircle2, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -43,7 +44,7 @@ interface TaskKanbanProps {
 
 interface Column {
   id: TaskStatus;
-  title: string;
+  titleKey: string;
   icon: React.ReactNode;
   accentColor: string;
   headerBg: string;
@@ -52,21 +53,21 @@ interface Column {
 const columns: Column[] = [
   {
     id: "PENDING",
-    title: "Ожидают",
+    titleKey: "tasks.statusPending",
     icon: <Clock className="h-4 w-4" />,
     accentColor: "bg-gray-400",
     headerBg: "bg-white/5",
   },
   {
     id: "IN_PROGRESS",
-    title: "В работе",
+    titleKey: "tasks.statusInProgress",
     icon: <PlayCircle className="h-4 w-4" />,
     accentColor: "bg-violet-500",
     headerBg: "bg-violet-500/10",
   },
   {
     id: "COMPLETED",
-    title: "Выполнено",
+    titleKey: "tasks.statusCompleted",
     icon: <CheckCircle2 className="h-4 w-4" />,
     accentColor: "bg-emerald-500",
     headerBg: "bg-emerald-500/10",
@@ -129,6 +130,7 @@ function KanbanColumn({
   onTaskComplete?: (id: string) => void;
   onCreateTask?: (status: TaskStatus) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={cn(
@@ -142,7 +144,7 @@ function KanbanColumn({
           <div className="flex items-center gap-2.5">
             <div className={cn("h-2 w-2 rounded-full", column.accentColor)} />
             <h3 className="font-semibold text-white text-sm uppercase tracking-wide">
-              {column.title}
+              {t(column.titleKey)}
             </h3>
             <span className="flex items-center justify-center h-5 min-w-5 px-1.5 text-xs font-semibold bg-white/10 rounded text-gray-300 border border-white/5">
               {tasks.length}
@@ -170,7 +172,7 @@ function KanbanColumn({
               <DropdownMenuContent align="end" className="w-40 bg-[#0d0d14] border-white/10">
                 <DropdownMenuItem onClick={() => onCreateTask?.(column.id)} className="hover:bg-white/5">
                   <Plus className="h-4 w-4 mr-2" />
-                  Добавить
+                  {t("common.add")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -182,7 +184,7 @@ function KanbanColumn({
       <ScrollArea className="flex-1">
         <div className="p-3">
           <SortableContext
-            items={tasks.map((t) => t.id)}
+            items={tasks.map((task) => task.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2.5">
@@ -202,8 +204,8 @@ function KanbanColumn({
               <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center mb-3">
                 {column.icon}
               </div>
-              <p className="text-sm font-medium">Нет задач</p>
-              <p className="text-xs mt-1 text-gray-600">Перетащите сюда или создайте</p>
+              <p className="text-sm font-medium">{t("tasks.noTasks")}</p>
+              <p className="text-xs mt-1 text-gray-600">{t("tasks.dropOrCreate")}</p>
             </div>
           )}
         </div>
@@ -220,7 +222,7 @@ function KanbanColumn({
           onClick={() => onCreateTask?.(column.id)}
         >
           <Plus className="h-4 w-4" />
-          <span className="text-sm">Добавить задачу</span>
+          <span className="text-sm">{t("tasks.addTask")}</span>
         </Button>
       </div>
     </div>

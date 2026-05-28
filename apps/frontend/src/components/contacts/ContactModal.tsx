@@ -13,6 +13,7 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Contact {
   id?: string;
@@ -34,14 +35,15 @@ interface ContactModalProps {
 }
 
 const availableTags = [
-  { id: "VIP", label: "VIP", bg: "bg-amber-500/20", text: "text-amber-400" },
-  { id: "Партнер", label: "Партнер", bg: "bg-purple-500/20", text: "text-purple-400" },
-  { id: "Клиент", label: "Клиент", bg: "bg-green-500/20", text: "text-green-400" },
-  { id: "Лид", label: "Лид", bg: "bg-blue-500/20", text: "text-blue-400" },
-  { id: "Поставщик", label: "Поставщик", bg: "bg-orange-500/20", text: "text-orange-400" },
+  { id: "VIP", label: "VIP", labelKey: null, bg: "bg-amber-500/20", text: "text-amber-400" },
+  { id: "Партнер", label: "Партнер", labelKey: "contacts.tagPartner", bg: "bg-purple-500/20", text: "text-purple-400" },
+  { id: "Клиент", label: "Клиент", labelKey: "contacts.tagClient", bg: "bg-green-500/20", text: "text-green-400" },
+  { id: "Лид", label: "Лид", labelKey: "contacts.tagLead", bg: "bg-blue-500/20", text: "text-blue-400" },
+  { id: "Поставщик", label: "Поставщик", labelKey: "contacts.tagSupplier", bg: "bg-orange-500/20", text: "text-orange-400" },
 ];
 
 export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: ContactModalProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<Contact>({
     firstName: "",
     lastName: "",
@@ -85,19 +87,19 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
     const newErrors: Record<string, string> = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = "Имя обязательно";
+      newErrors.firstName = t("contacts.firstNameRequired");
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = "Фамилия обязательна";
+      newErrors.lastName = t("contacts.lastNameRequired");
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Неверный формат email";
+      newErrors.email = t("contacts.invalidEmail");
     }
 
     if (formData.phone && !/^[\d\s\+\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = "Неверный формат телефона";
+      newErrors.phone = t("contacts.invalidPhone");
     }
 
     setErrors(newErrors);
@@ -118,7 +120,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
   const toggleTag = (tagId: string) => {
     const currentTags = formData.tags || [];
     if (currentTags.includes(tagId)) {
-      setFormData({ ...formData, tags: currentTags.filter(t => t !== tagId) });
+      setFormData({ ...formData, tags: currentTags.filter(item => item !== tagId) });
     } else {
       setFormData({ ...formData, tags: [...currentTags, tagId] });
     }
@@ -149,7 +151,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
             <h2 className="text-xl font-bold text-white">
-              {isEdit ? "Редактировать контакт" : "Новый контакт"}
+              {isEdit ? t("contacts.editContact") : t("contacts.newContact")}
             </h2>
             <button
               onClick={onClose}
@@ -165,7 +167,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Имя <span className="text-red-500">*</span>
+                  {t("contacts.firstName")} <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -173,7 +175,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Введите имя"
+                    placeholder={t("contacts.firstNamePlaceholder")}
                     className={cn(
                       "w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2  placeholder:text-gray-500",
                       errors.firstName ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-violet-500 focus:bg-white/10"
@@ -184,13 +186,13 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Фамилия <span className="text-red-500">*</span>
+                  {t("contacts.lastName")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  placeholder="Введите фамилию"
+                  placeholder={t("contacts.lastNamePlaceholder")}
                   className={cn(
                     "w-full px-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2  placeholder:text-gray-500",
                     errors.lastName ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-violet-500 focus:bg-white/10"
@@ -204,7 +206,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Компания
+                  {t("common.company")}
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -212,14 +214,14 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
                     type="text"
                     value={typeof formData.company === "string" ? formData.company : ""}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    placeholder="Название компании"
+                    placeholder={t("contacts.companyPlaceholder")}
                     className="w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  placeholder:text-gray-500"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Должность
+                  {t("contacts.position")}
                 </label>
                 <div className="relative">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -227,7 +229,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
                     type="text"
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    placeholder="Должность"
+                    placeholder={t("contacts.position")}
                     className="w-full pl-12 pr-4 py-3 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  placeholder:text-gray-500"
                   />
                 </div>
@@ -238,7 +240,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Email
+                  {t("common.email")}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -257,7 +259,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Телефон
+                  {t("common.phone")}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -279,7 +281,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
             {/* Tags */}
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Теги
+                {t("contacts.colTags")}
               </label>
               <div className="flex flex-wrap gap-2 mb-3">
                 {availableTags.map((tag) => {
@@ -298,7 +300,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
                       )}
                     >
                       <Tag className="w-3.5 h-3.5" />
-                      {tag.label}
+                      {tag.labelKey ? t(tag.labelKey) : tag.label}
                     </button>
                   );
                 })}
@@ -311,7 +313,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomTag())}
-                  placeholder="Добавить свой тег..."
+                  placeholder={t("contacts.customTagPlaceholder")}
                   className="flex-1 px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-2 border-white/10 focus:border-violet-500 focus:bg-white/10  placeholder:text-gray-500"
                 />
                 <button
@@ -324,10 +326,10 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
               </div>
 
               {/* Selected custom tags */}
-              {formData.tags && formData.tags.filter(t => !availableTags.find(at => at.id === t)).length > 0 && (
+              {formData.tags && formData.tags.filter(item => !availableTags.find(at => at.id === item)).length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {formData.tags
-                    .filter(t => !availableTags.find(at => at.id === t))
+                    .filter(item => !availableTags.find(at => at.id === item))
                     .map((tag) => (
                       <span
                         key={tag}
@@ -355,7 +357,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
               onClick={onClose}
               className="px-5 py-2.5 text-gray-400 font-medium rounded-xl hover:bg-white/5 "
             >
-              Отмена
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleSubmit}
@@ -363,7 +365,7 @@ export function ContactModal({ isOpen, onClose, onSave, contact, isLoading }: Co
               className="flex items-center gap-2 px-6 py-2.5 bg-violet-500 text-white font-medium rounded-xl hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed "
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEdit ? "Сохранить" : "Создать"}
+              {isEdit ? t("common.save") : t("common.create")}
             </button>
           </div>
         </div>

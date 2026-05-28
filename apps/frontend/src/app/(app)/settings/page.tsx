@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { integrationsApi, organizationsApi, usersApi } from "@/lib/api";
 import { CURRENCY_OPTIONS, CurrencyCode, getCurrencySymbol } from "@/lib/currency";
+import { useTranslation } from "@/components/providers/language-provider";
+import { LANGUAGES, type Language } from "@/lib/i18n";
+import { toast } from "sonner";
 
 // Custom icons for integrations
 const WhatsAppIcon = () => (
@@ -53,22 +56,23 @@ const InstagramIcon = () => (
 );
 
 const tabs = [
-  { id: "profile", name: "Профиль", icon: User },
-  { id: "notifications", name: "Уведомления", icon: Bell },
-  { id: "security", name: "Безопасность", icon: Shield },
-  { id: "appearance", name: "Внешний вид", icon: Palette },
-  { id: "integrations", name: "Интеграции", icon: Globe },
-  { id: "company", name: "Компания", icon: Building },
-  { id: "billing", name: "Тарифы", icon: CreditCard },
+  { id: "profile", labelKey: "settings.tabs.profile", icon: User },
+  { id: "notifications", labelKey: "settings.tabs.notifications", icon: Bell },
+  { id: "security", labelKey: "settings.tabs.security", icon: Shield },
+  { id: "appearance", labelKey: "settings.tabs.appearance", icon: Palette },
+  { id: "integrations", labelKey: "settings.tabs.integrations", icon: Globe },
+  { id: "company", labelKey: "settings.tabs.company", icon: Building },
+  { id: "billing", labelKey: "settings.tabs.billing", icon: CreditCard },
 ];
 
-// Integration configurations (UI config)
-const integrationConfigs: Record<string, { name: string; description: string; icon: any; color: string }> = {
-  whatsapp: { name: "WhatsApp Business", description: "Связь с клиентами через WhatsApp", icon: WhatsAppIcon, color: "bg-green-500" },
-  telegram: { name: "Telegram Bot", description: "Автоматизация через Telegram", icon: TelegramIcon, color: "bg-blue-500" },
-  instagram: { name: "Instagram Direct", description: "Сообщения из Instagram", icon: InstagramIcon, color: "bg-gradient-to-br from-purple-500 to-pink-500" },
-  email: { name: "Email IMAP/SMTP", description: "Почтовые ящики", icon: Mail, color: "bg-red-500" },
-  phone: { name: "IP-телефония", description: "Звонки и записи разговоров", icon: Phone, color: "bg-amber-500" },
+// Integration configurations (UI config). `name` is a brand name (not translated),
+// `descriptionKey` resolves through the i18n dictionary.
+const integrationConfigs: Record<string, { name: string; descriptionKey: string; icon: any; color: string }> = {
+  whatsapp: { name: "WhatsApp Business", descriptionKey: "settings.integrations.whatsappDesc", icon: WhatsAppIcon, color: "bg-green-500" },
+  telegram: { name: "Telegram Bot", descriptionKey: "settings.integrations.telegramDesc", icon: TelegramIcon, color: "bg-blue-500" },
+  instagram: { name: "Instagram Direct", descriptionKey: "settings.integrations.instagramDesc", icon: InstagramIcon, color: "bg-gradient-to-br from-purple-500 to-pink-500" },
+  email: { name: "Email IMAP/SMTP", descriptionKey: "settings.integrations.emailDesc", icon: Mail, color: "bg-red-500" },
+  phone: { name: "IP Telephony", descriptionKey: "settings.integrations.phoneDesc", icon: Phone, color: "bg-amber-500" },
 };
 
 interface IntegrationStatus {
@@ -158,11 +162,36 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
 }
 
 export default function SettingsPage() {
+  const { t, language, setLanguage } = useTranslation();
   const [activeTab, setActiveTab] = useState("profile");
   const user = useAuthStore((state) => state.user);
   const organization = useAuthStore((state) => state.organization);
   const updateOrganization = useAuthStore((state) => state.updateOrganization);
   const updateUser = useAuthStore((state) => state.updateUser);
+
+  // Language switch state
+  const [savingLanguage, setSavingLanguage] = useState(false);
+
+  const handleChangeLanguage = async (lang: Language) => {
+    if (lang === language) return;
+    const previous = language;
+    // Apply immediately for instant UI feedback.
+    setLanguage(lang);
+    setSavingLanguage(true);
+    try {
+      if (user?.id) {
+        await usersApi.update(user.id, { language: lang });
+        updateUser({ language: lang });
+      }
+      toast.success(t("settings.appearance.languageSaved"));
+    } catch (error) {
+      console.error("Failed to save language:", error);
+      setLanguage(previous);
+      toast.error(t("settings.appearance.languageError"));
+    } finally {
+      setSavingLanguage(false);
+    }
+  };
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -247,7 +276,7 @@ export default function SettingsPage() {
       setTimeout(() => setProfileSaved(false), 3000);
     } catch (error: any) {
       console.error('Failed to save profile:', error);
-      setProfileError(error.response?.data?.message || 'Ошибка сохранения профиля');
+      setProfileError(error.response?.data?.message || t('settings.profile.saveError'));
     } finally {
       setSavingProfile(false);
     }
@@ -286,11 +315,11 @@ export default function SettingsPage() {
   // Change password handler
   const handleChangePassword = async () => {
     if (passwordForm.new !== passwordForm.confirm) {
-      setPasswordError('Пароли не совпадают');
+      setPasswordError(t('settings.security.passwordsNoMatch'));
       return;
     }
     if (passwordForm.new.length < 6) {
-      setPasswordError('Пароль должен быть не менее 6 символов');
+      setPasswordError(t('settings.security.passwordMin'));
       return;
     }
 
@@ -308,7 +337,7 @@ export default function SettingsPage() {
       setTimeout(() => setPasswordSuccess(false), 3000);
     } catch (error: any) {
       console.error('Failed to change password:', error);
-      setPasswordError(error.response?.data?.message || 'Неверный текущий пароль');
+      setPasswordError(error.response?.data?.message || t('settings.security.wrongPassword'));
     } finally {
       setSavingPassword(false);
     }
@@ -379,7 +408,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     className="absolute bottom-0 right-0 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white/50 shadow-lg cursor-not-allowed"
-                    title="Загрузка аватара скоро будет доступна"
+                    title={t('settings.profile.avatarComingSoon')}
                     disabled
                   >
                     <Camera className="w-4 h-4" />
@@ -389,18 +418,18 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-semibold text-white">{user?.firstName} {user?.lastName}</h3>
                   <p className="text-sm text-gray-400">{user?.email}</p>
                   <span className="inline-block mt-1 px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs font-medium rounded">
-                    {user?.role === 'ADMIN' ? 'Администратор' : user?.role === 'MANAGER' ? 'Менеджер' : 'Пользователь'}
+                    {user?.role === 'ADMIN' ? t('roles.admin') : user?.role === 'MANAGER' ? t('roles.manager') : t('roles.user')}
                   </span>
                 </div>
               </div>
             </Section>
 
             {/* Personal Info */}
-            <Section title="Личные данные">
+            <Section title={t('settings.profile.personalData')}>
               <div className="p-4 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Имя</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.firstName')}</label>
                     <input
                       type="text"
                       value={profileForm.firstName}
@@ -409,7 +438,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Фамилия</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.lastName')}</label>
                     <input
                       type="text"
                       value={profileForm.lastName}
@@ -419,17 +448,17 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.email')}</label>
                   <input
                     type="email"
                     value={profileForm.email}
                     disabled
                     className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white/50 border-0 cursor-not-allowed"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email нельзя изменить</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('settings.profile.emailCannotChange')}</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Телефон</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.phone')}</label>
                   <input
                     type="tel"
                     value={profileForm.phone}
@@ -440,25 +469,25 @@ export default function SettingsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Должность</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.position')}</label>
                     <input
                       type="text"
                       value={profileForm.position}
                       onChange={(e) => setProfileForm({ ...profileForm, position: e.target.value })}
-                      placeholder="Менеджер по продажам"
+                      placeholder={t('settings.profile.positionPlaceholder')}
                       className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Часовой пояс</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.profile.timezone')}</label>
                     <select
                       value={profileForm.timezone}
                       onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
                       className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 appearance-none cursor-pointer"
                     >
-                      <option value="UTC+3" className="bg-gray-800">UTC+3 (Москва)</option>
-                      <option value="UTC+5" className="bg-gray-800">UTC+5 (Екатеринбург)</option>
-                      <option value="UTC+7" className="bg-gray-800">UTC+7 (Новосибирск/Бангкок)</option>
+                      <option value="UTC+3" className="bg-gray-800">{t('settings.profile.tzMoscow')}</option>
+                      <option value="UTC+5" className="bg-gray-800">{t('settings.profile.tzYekaterinburg')}</option>
+                      <option value="UTC+7" className="bg-gray-800">{t('settings.profile.tzNovosibirsk')}</option>
                     </select>
                   </div>
                 </div>
@@ -476,7 +505,7 @@ export default function SettingsPage() {
             {profileSaved && (
               <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm">
                 <Check className="w-4 h-4" />
-                Профиль успешно сохранён
+                {t('settings.profile.saved')}
               </div>
             )}
 
@@ -487,7 +516,7 @@ export default function SettingsPage() {
               className="w-full py-3 bg-violet-500 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl flex items-center justify-center gap-2"
             >
               {savingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
-              {savingProfile ? 'Сохранение...' : 'Сохранить изменения'}
+              {savingProfile ? t('common.saving') : t('common.saveChanges')}
             </button>
           </div>
         );
@@ -495,30 +524,30 @@ export default function SettingsPage() {
       case "notifications":
         return (
           <div className="space-y-6">
-            <Section title="Каналы уведомлений">
+            <Section title={t('settings.notifications.channels')}>
               <SettingsRow
                 icon={Mail}
-                title="Email уведомления"
-                description="Получать уведомления на почту"
+                title={t('settings.notifications.emailTitle')}
+                description={t('settings.notifications.emailDesc')}
                 action={<Toggle checked={emailNotifications} onChange={setEmailNotifications} />}
               />
               <SettingsRow
                 icon={Bell}
-                title="Push уведомления"
-                description="Уведомления в браузере"
+                title={t('settings.notifications.pushTitle')}
+                description={t('settings.notifications.pushDesc')}
                 action={<Toggle checked={pushNotifications} onChange={setPushNotifications} />}
               />
               <SettingsRow
                 icon={Smartphone}
-                title="SMS уведомления"
-                description="Важные уведомления по SMS"
+                title={t('settings.notifications.smsTitle')}
+                description={t('settings.notifications.smsDesc')}
                 action={<Toggle checked={smsNotifications} onChange={setSmsNotifications} />}
               />
             </Section>
 
-            <Section title="Типы уведомлений">
+            <Section title={t('settings.notifications.types')}>
               <SettingsRow
-                title="Новые сделки"
+                title={t('settings.notifications.newDeals')}
                 action={
                   <Toggle
                     checked={notificationTypes.newDeals}
@@ -527,7 +556,7 @@ export default function SettingsPage() {
                 }
               />
               <SettingsRow
-                title="Новые сообщения"
+                title={t('settings.notifications.newMessages')}
                 action={
                   <Toggle
                     checked={notificationTypes.newMessages}
@@ -536,7 +565,7 @@ export default function SettingsPage() {
                 }
               />
               <SettingsRow
-                title="Изменения в задачах"
+                title={t('settings.notifications.taskChanges')}
                 action={
                   <Toggle
                     checked={notificationTypes.taskChanges}
@@ -545,7 +574,7 @@ export default function SettingsPage() {
                 }
               />
               <SettingsRow
-                title="Напоминания"
+                title={t('settings.notifications.reminders')}
                 action={
                   <Toggle
                     checked={notificationTypes.reminders}
@@ -554,7 +583,7 @@ export default function SettingsPage() {
                 }
               />
               <SettingsRow
-                title="Системные уведомления"
+                title={t('settings.notifications.system')}
                 action={
                   <Toggle
                     checked={notificationTypes.system}
@@ -564,10 +593,10 @@ export default function SettingsPage() {
               />
             </Section>
 
-            <Section title="Расписание">
+            <Section title={t('settings.notifications.schedule')}>
               <SettingsRow
-                title="Тихий режим"
-                description="Не беспокоить с 22:00 до 08:00"
+                title={t('settings.notifications.quietMode')}
+                description={t('settings.notifications.quietModeDesc')}
                 action={
                   <Toggle
                     checked={notificationTypes.quietMode}
@@ -578,7 +607,7 @@ export default function SettingsPage() {
             </Section>
 
             <p className="text-xs text-gray-500 text-center">
-              Настройки уведомлений сохраняются автоматически
+              {t('settings.notifications.autoSaved')}
             </p>
           </div>
         );
@@ -586,10 +615,10 @@ export default function SettingsPage() {
       case "security":
         return (
           <div className="space-y-6">
-            <Section title="Пароль">
+            <Section title={t('settings.security.password')}>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Текущий пароль</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.security.currentPassword')}</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -608,7 +637,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Новый пароль</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.security.newPassword')}</label>
                   <input
                     type="password"
                     value={passwordForm.new}
@@ -618,7 +647,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Подтверждение пароля</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.security.confirmPassword')}</label>
                   <input
                     type="password"
                     value={passwordForm.confirm}
@@ -638,7 +667,7 @@ export default function SettingsPage() {
                 {passwordSuccess && (
                   <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm">
                     <Check className="w-4 h-4" />
-                    Пароль успешно изменён
+                    {t('settings.security.passwordChanged')}
                   </div>
                 )}
 
@@ -648,40 +677,40 @@ export default function SettingsPage() {
                   className="w-full py-2.5 bg-violet-500 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl text-sm flex items-center justify-center gap-2"
                 >
                   {savingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {savingPassword ? 'Изменение...' : 'Изменить пароль'}
+                  {savingPassword ? t('settings.security.changing') : t('settings.security.changePassword')}
                 </button>
               </div>
             </Section>
 
-            <Section title="Двухфакторная аутентификация">
+            <Section title={t('settings.security.twoFactor')}>
               <div className="p-4">
                 <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
                   <Shield className="w-8 h-8 text-gray-500" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-300">Двухфакторная аутентификация</p>
+                    <p className="text-sm font-medium text-gray-300">{t('settings.security.twoFactor')}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Функция находится в разработке и скоро будет доступна
+                      {t('settings.security.twoFactorDesc')}
                     </p>
                   </div>
                   <span className="px-2 py-1 bg-violet-500/20 text-violet-400 text-xs font-medium rounded-lg">
-                    Скоро
+                    {t('common.comingSoon')}
                   </span>
                 </div>
               </div>
             </Section>
 
-            <Section title="Текущая сессия">
+            <Section title={t('settings.security.currentSession')}>
               <div className="p-4">
                 <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-xl">
                   <Monitor className="w-5 h-5 text-green-400" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-white">Текущий браузер</p>
-                    <p className="text-xs text-gray-400">Вы вошли в систему</p>
+                    <p className="text-sm font-medium text-white">{t('settings.security.currentBrowser')}</p>
+                    <p className="text-xs text-gray-400">{t('settings.security.loggedIn')}</p>
                   </div>
                   <span className="w-2 h-2 bg-green-500 rounded-full" />
                 </div>
                 <p className="text-xs text-gray-500 mt-3 text-center">
-                  Управление сессиями будет доступно в следующих версиях
+                  {t('settings.security.sessionsComingSoon')}
                 </p>
               </div>
             </Section>
@@ -691,75 +720,90 @@ export default function SettingsPage() {
       case "appearance":
         return (
           <div className="space-y-6">
-            <Section title="Тема">
+            <Section title={t('settings.appearance.theme')}>
               <div className="p-4">
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: "light", icon: Sun, name: "Светлая", disabled: true },
-                    { id: "dark", icon: Moon, name: "Тёмная", disabled: false },
-                    { id: "system", icon: Monitor, name: "Системная", disabled: true },
-                  ].map((t) => (
+                    { id: "light", icon: Sun, name: t('settings.appearance.themeLight'), disabled: true },
+                    { id: "dark", icon: Moon, name: t('settings.appearance.themeDark'), disabled: false },
+                    { id: "system", icon: Monitor, name: t('settings.appearance.themeSystem'), disabled: true },
+                  ].map((themeOption) => (
                     <button
-                      key={t.id}
-                      onClick={() => !t.disabled && setTheme(t.id as any)}
-                      disabled={t.disabled}
+                      key={themeOption.id}
+                      onClick={() => !themeOption.disabled && setTheme(themeOption.id as any)}
+                      disabled={themeOption.disabled}
                       className={cn(
                         "flex flex-col items-center gap-2 p-4 rounded-xl border-2 relative",
-                        theme === t.id
+                        theme === themeOption.id
                           ? "border-violet-500 bg-violet-500/10"
                           : "border-white/10",
-                        t.disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/20"
+                        themeOption.disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/20"
                       )}
                     >
-                      <t.icon className={cn("w-6 h-6", theme === t.id ? "text-violet-400" : "text-gray-400")} />
-                      <span className={cn("text-sm font-medium", theme === t.id ? "text-violet-400" : "text-gray-400")}>
-                        {t.name}
+                      <themeOption.icon className={cn("w-6 h-6", theme === themeOption.id ? "text-violet-400" : "text-gray-400")} />
+                      <span className={cn("text-sm font-medium", theme === themeOption.id ? "text-violet-400" : "text-gray-400")}>
+                        {themeOption.name}
                       </span>
-                      {theme === t.id && <Check className="w-4 h-4 text-violet-400" />}
-                      {t.disabled && (
+                      {theme === themeOption.id && <Check className="w-4 h-4 text-violet-400" />}
+                      {themeOption.disabled && (
                         <span className="absolute -top-2 -right-2 px-1.5 py-0.5 bg-violet-500/20 text-violet-400 text-[10px] font-medium rounded">
-                          Скоро
+                          {t('common.comingSoon')}
                         </span>
                       )}
                     </button>
                   ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-3 text-center">
-                  Сейчас доступна только тёмная тема. Светлая тема в разработке.
+                  {t('settings.appearance.themeNote')}
                 </p>
               </div>
             </Section>
 
-            <Section title="Язык и регион">
-              <div className="p-4 space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-                  <Languages className="w-5 h-5 text-gray-400" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white">Язык интерфейса</p>
-                    <p className="text-xs text-gray-400">Русский</p>
-                  </div>
-                  <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg">
-                    Активен
-                  </span>
+            <Section title={t('settings.appearance.languageRegion')}>
+              <div className="p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Languages className="w-5 h-5 text-gray-400 shrink-0" />
+                  <p className="text-sm font-medium text-white">{t('settings.appearance.interfaceLanguage')}</p>
+                  {savingLanguage && <Loader2 className="w-4 h-4 text-violet-400 animate-spin ml-auto" />}
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  Дополнительные языки будут добавлены в будущих версиях
+                <div className="grid grid-cols-2 gap-3">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.value}
+                      onClick={() => handleChangeLanguage(lang.value)}
+                      disabled={savingLanguage}
+                      className={cn(
+                        "flex items-center justify-between gap-2 px-4 py-3 rounded-xl border-2 disabled:opacity-60",
+                        language === lang.value
+                          ? "border-violet-500 bg-violet-500/10"
+                          : "border-white/10 hover:border-white/20"
+                      )}
+                    >
+                      <span className={cn("text-sm font-medium", language === lang.value ? "text-violet-400" : "text-gray-300")}>
+                        {lang.nativeLabel}
+                      </span>
+                      {language === lang.value && <Check className="w-4 h-4 text-violet-400" />}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {t('settings.appearance.languageNote')}
                 </p>
               </div>
             </Section>
 
-            <Section title="Отображение">
+            <Section title={t('settings.appearance.display')}>
               <div className="p-4">
                 <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
                   <Palette className="w-8 h-8 text-gray-500" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-300">Настройки отображения</p>
+                    <p className="text-sm font-medium text-gray-300">{t('settings.appearance.displaySettings')}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Компактный режим, анимации и другие настройки
+                      {t('settings.appearance.displayDesc')}
                     </p>
                   </div>
                   <span className="px-2 py-1 bg-violet-500/20 text-violet-400 text-xs font-medium rounded-lg">
-                    Скоро
+                    {t('common.comingSoon')}
                   </span>
                 </div>
               </div>
@@ -770,7 +814,7 @@ export default function SettingsPage() {
       case "integrations":
         return (
           <div className="space-y-6">
-            <Section title="Подключенные интеграции">
+            <Section title={t('settings.integrations.connected')}>
               {integrationsLoading ? (
                 <div className="p-8 flex justify-center">
                   <Loader2 className="w-6 h-6 text-violet-500 animate-spin" />
@@ -799,7 +843,7 @@ export default function SettingsPage() {
                           {isConnected && <Check className="w-5 h-5 text-green-400" />}
                         </div>
                         <h4 className="font-semibold text-sm text-white">{config.name}</h4>
-                        <p className="text-xs text-gray-400 mt-1 mb-3">{config.description}</p>
+                        <p className="text-xs text-gray-400 mt-1 mb-3">{t(config.descriptionKey)}</p>
                         <button
                           className={cn(
                             "w-full py-2 rounded-lg text-sm font-medium",
@@ -808,7 +852,7 @@ export default function SettingsPage() {
                               : "bg-violet-500 text-white hover:bg-purple-500"
                           )}
                         >
-                          {isConnected ? "Настроить" : "Подключить"}
+                          {isConnected ? t('settings.integrations.configure') : t('settings.integrations.connect')}
                         </button>
                       </div>
                     );
@@ -820,8 +864,8 @@ export default function SettingsPage() {
             <Section>
               <SettingsRow
                 icon={ExternalLink}
-                title="API и Webhooks"
-                description="Настройка внешних интеграций"
+                title={t('settings.integrations.apiWebhooks')}
+                description={t('settings.integrations.apiWebhooksDesc')}
                 onClick={() => {}}
               />
             </Section>
@@ -844,16 +888,16 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-semibold text-white">{companyForm.name || 'Sintara CRM'}</h3>
                   <p className="text-sm text-gray-400">{organization?.slug}.sintara-crm.com</p>
                   <button className="text-sm text-violet-400 font-medium mt-1 opacity-50 cursor-not-allowed">
-                    Изменить логотип (скоро)
+                    {t('settings.company.changeLogo')}
                   </button>
                 </div>
               </div>
             </Section>
 
-            <Section title="Информация о компании">
+            <Section title={t('settings.company.info')}>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Название компании</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.name')}</label>
                   <input
                     type="text"
                     value={companyForm.name}
@@ -862,7 +906,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">ИНН</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.inn')}</label>
                   <input
                     type="text"
                     value={companyForm.inn}
@@ -872,18 +916,18 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Юридический адрес</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.legalAddress')}</label>
                   <input
                     type="text"
                     value={companyForm.address}
                     onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
-                    placeholder="г. Москва, ул. Примерная, д. 1"
+                    placeholder={t('settings.company.addressPlaceholder')}
                     className="w-full px-4 py-2.5 bg-white/5 rounded-xl text-sm text-white border-0 focus:ring-2 focus:ring-violet-500 focus:bg-white/10 placeholder:text-gray-500"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Телефон</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.phone')}</label>
                     <input
                       type="tel"
                       value={companyForm.phone}
@@ -893,7 +937,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.email')}</label>
                     <input
                       type="email"
                       value={companyForm.email}
@@ -906,10 +950,10 @@ export default function SettingsPage() {
               </div>
             </Section>
 
-            <Section title="Валюта">
+            <Section title={t('settings.company.currency')}>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Валюта для отображения сумм</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">{t('settings.company.currencyLabel')}</label>
                   <select
                     value={selectedCurrency}
                     onChange={(e) => setSelectedCurrency(e.target.value as CurrencyCode)}
@@ -922,7 +966,7 @@ export default function SettingsPage() {
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1.5">
-                    Выбранная валюта будет использоваться для отображения всех сумм в CRM
+                    {t('settings.company.currencyNote')}
                   </p>
                 </div>
                 <button
@@ -931,7 +975,7 @@ export default function SettingsPage() {
                   className="w-full py-2.5 bg-violet-500 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl flex items-center justify-center gap-2"
                 >
                   {savingCurrency && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {savingCurrency ? 'Сохранение...' : 'Сохранить валюту'}
+                  {savingCurrency ? t('common.saving') : t('settings.company.saveCurrency')}
                 </button>
               </div>
             </Section>
@@ -939,7 +983,7 @@ export default function SettingsPage() {
             {companySaved && (
               <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm">
                 <Check className="w-4 h-4" />
-                Данные компании успешно сохранены
+                {t('settings.company.saved')}
               </div>
             )}
 
@@ -949,7 +993,7 @@ export default function SettingsPage() {
               className="w-full py-3 bg-violet-500 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl flex items-center justify-center gap-2"
             >
               {savingCompany && <Loader2 className="w-4 h-4 animate-spin" />}
-              {savingCompany ? 'Сохранение...' : 'Сохранить изменения'}
+              {savingCompany ? t('common.saving') : t('common.saveChanges')}
             </button>
           </div>
         );
@@ -962,38 +1006,37 @@ export default function SettingsPage() {
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="w-5 h-5" />
-                <span className="text-sm font-medium opacity-90">Текущий тариф</span>
+                <span className="text-sm font-medium opacity-90">{t('settings.billing.currentPlan')}</span>
               </div>
-              <h3 className="text-2xl font-bold mb-1">Бесплатный</h3>
-              <p className="text-sm opacity-80 mb-4">Все функции доступны • Без ограничений</p>
+              <h3 className="text-2xl font-bold mb-1">{t('settings.billing.free')}</h3>
+              <p className="text-sm opacity-80 mb-4">{t('settings.billing.freeDesc')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold">{currencySymbol}0</span>
-                <span className="text-sm opacity-80">/ месяц</span>
+                <span className="text-sm opacity-80">{t('settings.billing.perMonth')}</span>
               </div>
             </div>
 
-            <Section title="О тарифах">
+            <Section title={t('settings.billing.aboutPlans')}>
               <div className="p-6 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-violet-500/20 flex items-center justify-center mx-auto mb-4">
                   <Crown className="w-8 h-8 text-violet-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">Платные тарифы скоро</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">{t('settings.billing.paidComingSoon')}</h3>
                 <p className="text-sm text-gray-400 max-w-md mx-auto">
-                  В данный момент все функции Sintara CRM доступны бесплатно.
-                  Платные тарифы с расширенными возможностями будут добавлены позже.
+                  {t('settings.billing.paidDesc')}
                 </p>
               </div>
             </Section>
 
-            <Section title="Что входит в бесплатный план">
+            <Section title={t('settings.billing.whatsIncluded')}>
               <div className="p-4 space-y-3">
                 {[
-                  "Неограниченное количество сделок",
-                  "Неограниченное количество контактов",
-                  "Все интеграции",
-                  "Онлайн-запись",
-                  "Аналитика и отчёты",
-                  "Telegram бот",
+                  t('settings.billing.unlimitedDeals'),
+                  t('settings.billing.unlimitedContacts'),
+                  t('settings.billing.allIntegrations'),
+                  t('settings.billing.onlineBooking'),
+                  t('settings.billing.analyticsReports'),
+                  t('settings.billing.telegramBot'),
                 ].map((feature) => (
                   <div key={feature} className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -1010,13 +1053,13 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
                   <CreditCard className="w-8 h-8 text-gray-500" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-300">Способы оплаты</p>
+                    <p className="text-sm font-medium text-gray-300">{t('settings.billing.paymentMethods')}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Будут доступны при запуске платных тарифов
+                      {t('settings.billing.paymentMethodsDesc')}
                     </p>
                   </div>
                   <span className="px-2 py-1 bg-violet-500/20 text-violet-400 text-xs font-medium rounded-lg">
-                    Скоро
+                    {t('common.comingSoon')}
                   </span>
                 </div>
               </div>
@@ -1030,7 +1073,7 @@ export default function SettingsPage() {
             <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
               <Building className="w-8 h-8 text-gray-400" />
             </div>
-            <p className="text-gray-400 font-medium">Раздел в разработке</p>
+            <p className="text-gray-400 font-medium">{t('settings.sectionInDevelopment')}</p>
           </div>
         );
     }
@@ -1040,7 +1083,7 @@ export default function SettingsPage() {
     <div className="h-full min-h-full flex">
       {/* Sidebar */}
       <div className="w-64 glass-card border-r border-white/5 p-4">
-        <h1 className="text-xl font-bold text-white mb-6 px-3">Настройки</h1>
+        <h1 className="text-xl font-bold text-white mb-6 px-3">{t('settings.title')}</h1>
         <nav className="space-y-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -1056,7 +1099,7 @@ export default function SettingsPage() {
                 )}
               >
                 <tab.icon className="w-5 h-5" />
-                {tab.name}
+                {t(tab.labelKey)}
               </button>
             );
           })}
@@ -1067,7 +1110,7 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-bold text-white mb-6">
-            {tabs.find(t => t.id === activeTab)?.name}
+            {t(tabs.find((tab) => tab.id === activeTab)?.labelKey ?? '')}
           </h2>
           {renderContent()}
         </div>

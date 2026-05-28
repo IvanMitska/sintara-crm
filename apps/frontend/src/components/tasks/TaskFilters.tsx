@@ -12,6 +12,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,7 +57,21 @@ export function TaskFilters({
   onFiltersChange,
   assignees = [],
 }: TaskFiltersProps) {
+  const { t } = useTranslation();
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const statusLabelKeys: Record<string, string> = {
+    PENDING: "tasks.statusPending",
+    IN_PROGRESS: "tasks.statusInProgress",
+    COMPLETED: "tasks.statusCompleted",
+    CANCELLED: "tasks.statusCancelled",
+  };
+  const priorityLabelKeys: Record<string, string> = {
+    URGENT: "tasks.priorityUrgent",
+    HIGH: "tasks.priorityHigh",
+    MEDIUM: "tasks.priorityMedium",
+    LOW: "tasks.priorityLow",
+  };
 
   const activeFiltersCount = [
     filters.status && filters.status !== "ALL",
@@ -80,10 +95,10 @@ export function TaskFilters({
   };
 
   const quickFilters = [
-    { label: "Сегодня", key: "today", icon: Clock },
-    { label: "Просроченные", key: "overdue", icon: AlertTriangle },
-    { label: "Мои задачи", key: "mine", icon: User },
-    { label: "Срочные", key: "high", icon: Flag },
+    { labelKey: "tasks.today", key: "today", icon: Clock },
+    { labelKey: "tasks.overdue", key: "overdue", icon: AlertTriangle },
+    { labelKey: "tasks.myTasks", key: "mine", icon: User },
+    { labelKey: "tasks.urgentPlural", key: "high", icon: Flag },
   ];
 
   const handleQuickFilter = (key: string) => {
@@ -142,7 +157,7 @@ export function TaskFilters({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
-            placeholder="Поиск задач..."
+            placeholder={t("tasks.searchTasks")}
             value={filters.search || ""}
             onChange={(e) =>
               onFiltersChange({ ...filters, search: e.target.value })
@@ -174,22 +189,22 @@ export function TaskFilters({
                 {filters.status && filters.status !== "ALL" && (
                   <div className={cn("h-2 w-2 rounded-full", STATUS_DOTS[filters.status as keyof typeof STATUS_DOTS])} />
                 )}
-                <span className="text-sm">Статус</span>
+                <span className="text-sm">{t("tasks.status")}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-[#0d0d14] border-white/10">
               <DropdownMenuLabel className="text-xs uppercase tracking-wide text-gray-500 font-medium">
-                Статус задачи
+                {t("tasks.taskStatus")}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/5" />
               <DropdownMenuItem
                 onClick={() => onFiltersChange({ ...filters, status: "ALL" })}
                 className={cn("focus:bg-white/5", filters.status === "ALL" && "bg-white/5")}
               >
-                <span className="text-gray-300">Все статусы</span>
+                <span className="text-gray-300">{t("tasks.allStatuses")}</span>
               </DropdownMenuItem>
-              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+              {Object.entries(STATUS_CONFIG).map(([key]) => (
                 <DropdownMenuItem
                   key={key}
                   onClick={() => onFiltersChange({ ...filters, status: key as any })}
@@ -197,7 +212,7 @@ export function TaskFilters({
                 >
                   <div className="flex items-center gap-2.5">
                     <div className={cn("h-2 w-2 rounded-full", STATUS_DOTS[key as keyof typeof STATUS_DOTS])} />
-                    <span className="text-gray-300">{config.label}</span>
+                    <span className="text-gray-300">{t(statusLabelKeys[key])}</span>
                   </div>
                 </DropdownMenuItem>
               ))}
@@ -217,22 +232,22 @@ export function TaskFilters({
                 {filters.priority && filters.priority !== "ALL" && (
                   <div className={cn("h-2 w-2 rounded-full", PRIORITY_DOTS[filters.priority as keyof typeof PRIORITY_DOTS])} />
                 )}
-                <span className="text-sm">Приоритет</span>
+                <span className="text-sm">{t("tasks.priority")}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-[#0d0d14] border-white/10">
               <DropdownMenuLabel className="text-xs uppercase tracking-wide text-gray-500 font-medium">
-                Приоритет
+                {t("tasks.priority")}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/5" />
               <DropdownMenuItem
                 onClick={() => onFiltersChange({ ...filters, priority: "ALL" })}
                 className={cn("focus:bg-white/5", filters.priority === "ALL" && "bg-white/5")}
               >
-                <span className="text-gray-300">Все приоритеты</span>
+                <span className="text-gray-300">{t("tasks.allPriorities")}</span>
               </DropdownMenuItem>
-              {Object.entries(PRIORITY_CONFIG).map(([key, config]) => (
+              {Object.entries(PRIORITY_CONFIG).map(([key]) => (
                 <DropdownMenuItem
                   key={key}
                   onClick={() => onFiltersChange({ ...filters, priority: key as any })}
@@ -240,7 +255,7 @@ export function TaskFilters({
                 >
                   <div className="flex items-center gap-2.5">
                     <div className={cn("h-2 w-2 rounded-full", PRIORITY_DOTS[key as keyof typeof PRIORITY_DOTS])} />
-                    <span className="text-gray-300">{config.label}</span>
+                    <span className="text-gray-300">{t(priorityLabelKeys[key])}</span>
                   </div>
                 </DropdownMenuItem>
               ))}
@@ -257,7 +272,7 @@ export function TaskFilters({
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            <span className="hidden sm:inline text-sm">Фильтры</span>
+            <span className="hidden sm:inline text-sm">{t("tasks.filters")}</span>
             {activeFiltersCount > 0 && (
               <span className={cn(
                 "flex items-center justify-center h-5 min-w-5 px-1 text-xs font-semibold rounded",
@@ -287,7 +302,7 @@ export function TaskFilters({
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              {filter.label}
+              {t(filter.labelKey)}
             </button>
           );
         })}
@@ -298,7 +313,7 @@ export function TaskFilters({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10"
           >
             <X className="h-3.5 w-3.5" />
-            Сбросить
+            {t("common.reset")}
           </button>
         )}
       </div>
@@ -308,7 +323,7 @@ export function TaskFilters({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5 bg-white/5 rounded-xl border border-white/10">
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">
-              Исполнитель
+              {t("tasks.assignee")}
             </label>
             <Select
               value={filters.assigneeId || "all"}
@@ -320,12 +335,12 @@ export function TaskFilters({
               }
             >
               <SelectTrigger className="bg-[#0d0d14] border-white/10 text-white">
-                <SelectValue placeholder="Все исполнители" />
+                <SelectValue placeholder={t("tasks.allAssignees")} />
               </SelectTrigger>
               <SelectContent className="bg-[#0d0d14] border-white/10">
-                <SelectItem value="all" className="text-gray-300 focus:bg-white/5">Все исполнители</SelectItem>
-                <SelectItem value="current" className="text-gray-300 focus:bg-white/5">Мои задачи</SelectItem>
-                <SelectItem value="unassigned" className="text-gray-300 focus:bg-white/5">Не назначены</SelectItem>
+                <SelectItem value="all" className="text-gray-300 focus:bg-white/5">{t("tasks.allAssignees")}</SelectItem>
+                <SelectItem value="current" className="text-gray-300 focus:bg-white/5">{t("tasks.myTasks")}</SelectItem>
+                <SelectItem value="unassigned" className="text-gray-300 focus:bg-white/5">{t("tasks.unassigned")}</SelectItem>
                 {assignees.map((assignee) => (
                   <SelectItem key={assignee.id} value={assignee.id} className="text-gray-300 focus:bg-white/5">
                     {assignee.name}
@@ -337,7 +352,7 @@ export function TaskFilters({
 
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">
-              Срок от
+              {t("tasks.dueDateFrom")}
             </label>
             <Input
               type="date"
@@ -351,7 +366,7 @@ export function TaskFilters({
 
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">
-              Срок до
+              {t("tasks.dueDateTo")}
             </label>
             <Input
               type="date"
@@ -365,7 +380,7 @@ export function TaskFilters({
 
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">
-              Дополнительно
+              {t("tasks.additional")}
             </label>
             <label className="flex items-center gap-3 cursor-pointer p-3 bg-[#0d0d14] rounded-lg border border-white/10 hover:border-white/20">
               <input
@@ -376,7 +391,7 @@ export function TaskFilters({
                 }
                 className="rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500"
               />
-              <span className="text-sm text-gray-300">Только просроченные</span>
+              <span className="text-sm text-gray-300">{t("tasks.onlyOverdue")}</span>
             </label>
           </div>
         </div>

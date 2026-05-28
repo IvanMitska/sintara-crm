@@ -31,12 +31,13 @@ import {
 import { cn } from "@/lib/utils";
 import { analyticsApi, dealsApi, pipelinesApi } from "@/lib/api";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/components/providers/language-provider";
 
 const periods = [
-  { id: "week", name: "Неделя", days: 7 },
-  { id: "month", name: "Месяц", days: 30 },
-  { id: "quarter", name: "Квартал", days: 90 },
-  { id: "year", name: "Год", days: 365 },
+  { id: "week", nameKey: "analytics.periodWeek", days: 7 },
+  { id: "month", nameKey: "analytics.periodMonth", days: 30 },
+  { id: "quarter", nameKey: "analytics.periodQuarter", days: 90 },
+  { id: "year", nameKey: "analytics.periodYear", days: 365 },
 ];
 
 const defaultColors = ["#8B5CF6", "#A855F7", "#F59E0B", "#10B981", "#EF4444", "#6366F1", "#EC4899"];
@@ -128,6 +129,7 @@ function ChartCard({
 }
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { formatCompact, format } = useCurrency();
   const [period, setPeriod] = useState("month");
   const [loading, setLoading] = useState(true);
@@ -256,8 +258,8 @@ export default function AnalyticsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Аналитика</h1>
-            <p className="text-sm text-gray-400 mt-1">Обзор ключевых показателей</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">{t("analytics.title")}</h1>
+            <p className="text-sm text-gray-400 mt-1">{t("analytics.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1">
             {/* Period Selector */}
@@ -273,7 +275,7 @@ export default function AnalyticsPage() {
                       : "text-gray-400 hover:text-white"
                   )}
                 >
-                  {p.name}
+                  {t(p.nameKey)}
                 </button>
               ))}
             </div>
@@ -300,19 +302,19 @@ export default function AnalyticsPage() {
           <div className="px-3 sm:px-4 py-2 glass-card rounded-xl flex items-center gap-2 shrink-0">
             <div className={cn("w-2 h-2 rounded-full", loading ? "bg-yellow-500" : "bg-green-500")} />
             <span className="text-sm font-medium text-gray-300 whitespace-nowrap">
-              {loading ? "Загрузка..." : "Данные обновлены"}
+              {loading ? t("common.loading") : t("analytics.dataUpdated")}
             </span>
           </div>
           {!loading && (
             <>
               <div className="px-3 sm:px-4 py-2 bg-violet-500/20 text-violet-400 rounded-xl text-sm font-medium whitespace-nowrap shrink-0">
-                {totalDeals} сделок
+                {t("analytics.dealsCountPill", { count: totalDeals })}
               </div>
               <div className="px-3 sm:px-4 py-2 bg-green-500/20 text-green-400 rounded-xl text-sm font-medium whitespace-nowrap shrink-0">
                 {formatCompact(totalRevenue)}
               </div>
               <div className="px-3 sm:px-4 py-2 bg-amber-500/20 text-amber-400 rounded-xl text-sm font-medium whitespace-nowrap shrink-0">
-                {totalTasks} задач
+                {t("analytics.tasksCountPill", { count: totalTasks })}
               </div>
             </>
           )}
@@ -321,7 +323,7 @@ export default function AnalyticsPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <KPICard
-            title="Общая выручка"
+            title={t("analytics.totalRevenue")}
             value={format(totalRevenue)}
             change={revenueChange ? `${revenueChange > 0 ? '+' : ''}${revenueChange}%` : undefined}
             changeType={revenueChange ? (revenueChange > 0 ? "up" : "down") : undefined}
@@ -330,7 +332,7 @@ export default function AnalyticsPage() {
             loading={loading}
           />
           <KPICard
-            title="Конверсия"
+            title={t("analytics.conversionRate")}
             value={`${conversionRate.toFixed(1)}%`}
             change={conversionChange ? `${conversionChange > 0 ? '+' : ''}${conversionChange}%` : undefined}
             changeType={conversionChange ? (conversionChange > 0 ? "up" : "down") : undefined}
@@ -339,7 +341,7 @@ export default function AnalyticsPage() {
             loading={loading}
           />
           <KPICard
-            title="Средний чек"
+            title={t("analytics.avgDealSize")}
             value={format(avgDealSize)}
             change={avgDealChange ? `${avgDealChange > 0 ? '+' : ''}${avgDealChange}%` : undefined}
             changeType={avgDealChange ? (avgDealChange > 0 ? "up" : "down") : undefined}
@@ -348,7 +350,7 @@ export default function AnalyticsPage() {
             loading={loading}
           />
           <KPICard
-            title="Новые клиенты"
+            title={t("analytics.newClients")}
             value={newClients.toString()}
             change={clientsChange ? `${clientsChange > 0 ? '+' : ''}${clientsChange}%` : undefined}
             changeType={clientsChange ? (clientsChange > 0 ? "up" : "down") : undefined}
@@ -360,18 +362,18 @@ export default function AnalyticsPage() {
 
         {/* Main Chart */}
         <ChartCard
-          title="Динамика продаж"
-          subtitle="Выручка и количество сделок за период"
+          title={t("analytics.salesDynamics")}
+          subtitle={t("analytics.salesDynamicsSubtitle")}
           loading={loading}
           action={
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-violet-500" />
-                <span className="text-gray-400">Выручка</span>
+                <span className="text-gray-400">{t("analytics.revenue")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-gray-400">Сделки</span>
+                <span className="text-gray-400">{t("analytics.deals")}</span>
               </div>
             </div>
           }
@@ -403,7 +405,7 @@ export default function AnalyticsPage() {
                   itemStyle={{ color: "#9CA3AF" }}
                   formatter={(value: any, name: string) => [
                     name === "revenue" || name === "sales" ? format(value) : value,
-                    name === "revenue" || name === "sales" ? "Выручка" : "Сделки"
+                    name === "revenue" || name === "sales" ? t("analytics.revenue") : t("analytics.deals")
                   ]}
                 />
                 <Area
@@ -426,7 +428,7 @@ export default function AnalyticsPage() {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-80 text-gray-400">
-              Нет данных за выбранный период
+              {t("analytics.noData")}
             </div>
           )}
         </ChartCard>
@@ -434,7 +436,7 @@ export default function AnalyticsPage() {
         {/* Two Column Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Funnel */}
-          <ChartCard title="Воронка продаж" subtitle="Конверсия по этапам" loading={loading}>
+          <ChartCard title={t("dashboard.salesFunnel")} subtitle={t("analytics.funnelSubtitle")} loading={loading}>
             {funnelStats.length > 0 ? (
               <div className="space-y-4">
                 {funnelStats.map((item) => {
@@ -445,7 +447,7 @@ export default function AnalyticsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-300">{item.stage}</span>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-400">{item.count} сделок</span>
+                          <span className="text-sm text-gray-400">{t("analytics.dealsCountPill", { count: item.count })}</span>
                           <span className="text-sm font-semibold text-white">
                             {formatCompact(item.value)}
                           </span>
@@ -466,13 +468,13 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-60 text-gray-400">
-                Нет данных о сделках
+                {t("analytics.noDealsData")}
               </div>
             )}
           </ChartCard>
 
           {/* Pie Chart - Lead Sources */}
-          <ChartCard title="Источники лидов" subtitle="Распределение по каналам" loading={loading}>
+          <ChartCard title={t("analytics.leadSources")} subtitle={t("analytics.leadSourcesSubtitle")} loading={loading}>
             {sourceData.length > 0 ? (
               <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
                 <div className="w-40 sm:w-48 h-40 sm:h-48">
@@ -500,7 +502,7 @@ export default function AnalyticsPage() {
                         }}
                         labelStyle={{ color: "#fff" }}
                         itemStyle={{ color: "#9CA3AF" }}
-                        formatter={(value: any) => [value, "Количество"]}
+                        formatter={(value: any) => [value, t("analytics.count")]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -522,7 +524,7 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-60 text-gray-400">
-                Нет данных об источниках
+                {t("analytics.noSourcesData")}
               </div>
             )}
           </ChartCard>
@@ -531,7 +533,7 @@ export default function AnalyticsPage() {
         {/* Activity and Top Managers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Activity Chart */}
-          <ChartCard title="��ктивность команды" subtitle="За последнюю неделю" loading={loading}>
+          <ChartCard title={t("analytics.teamActivity")} subtitle={t("analytics.teamActivitySubtitle")} loading={loading}>
             {activityData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={240}>
@@ -549,41 +551,41 @@ export default function AnalyticsPage() {
                       labelStyle={{ color: "#fff" }}
                       itemStyle={{ color: "#9CA3AF" }}
                     />
-                    <Bar dataKey="calls" fill="#8B5CF6" name="Звонки" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="meetings" fill="#10B981" name="Встречи" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="emails" fill="#F59E0B" name="Email" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="calls" fill="#8B5CF6" name={t("analytics.calls")} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="meetings" fill="#10B981" name={t("analytics.meetings")} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="emails" fill="#F59E0B" name={t("common.email")} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
                 <div className="flex items-center justify-center gap-6 mt-4">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded bg-violet-500" />
-                    <span className="text-sm text-gray-400">Звонки</span>
+                    <span className="text-sm text-gray-400">{t("analytics.calls")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded bg-green-500" />
-                    <span className="text-sm text-gray-400">Встречи</span>
+                    <span className="text-sm text-gray-400">{t("analytics.meetings")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded bg-amber-500" />
-                    <span className="text-sm text-gray-400">Email</span>
+                    <span className="text-sm text-gray-400">{t("common.email")}</span>
                   </div>
                 </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-60 text-gray-400">
-                Нет данных об активности
+                {t("analytics.noActivityData")}
               </div>
             )}
           </ChartCard>
 
           {/* Top Managers */}
           <ChartCard
-            title="Лучшие менеджеры"
-            subtitle="По выручке за период"
+            title={t("analytics.topManagers")}
+            subtitle={t("analytics.topManagersSubtitle")}
             loading={loading}
             action={
               <button className="text-sm text-violet-400 font-medium hover:text-violet-300">
-                Смотреть всех
+                {t("analytics.viewAll")}
               </button>
             }
           >
@@ -605,7 +607,7 @@ export default function AnalyticsPage() {
                         {manager.name || `${manager.firstName || ''} ${manager.lastName || ''}`}
                       </p>
                       <p className="text-xs text-gray-400">
-                        {manager.deals || manager.dealsCount || 0} сделок • {manager.conversion || manager.conversionRate || 0}% конверсия
+                        {t("analytics.managerStatsLine", { deals: manager.deals || manager.dealsCount || 0, conversion: manager.conversion || manager.conversionRate || 0 })}
                       </p>
                     </div>
                     <div className="text-right">
@@ -615,7 +617,7 @@ export default function AnalyticsPage() {
                       {index === 0 && (
                         <div className="flex items-center gap-1 justify-end">
                           <Award className="w-3 h-3 text-amber-500" />
-                          <span className="text-xs text-amber-400 font-medium">Лидер</span>
+                          <span className="text-xs text-amber-400 font-medium">{t("analytics.leader")}</span>
                         </div>
                       )}
                     </div>
@@ -624,7 +626,7 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-60 text-gray-400">
-                Нет данных о менеджерах
+                {t("analytics.noManagersData")}
               </div>
             )}
           </ChartCard>
@@ -634,30 +636,30 @@ export default function AnalyticsPage() {
         <div className="glass-card rounded-2xl p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <div>
-              <h3 className="font-semibold text-white">Цели на месяц</h3>
-              <p className="text-sm text-gray-400">Прогресс выполнения плана</p>
+              <h3 className="font-semibold text-white">{t("analytics.monthlyGoals")}</h3>
+              <p className="text-sm text-gray-400">{t("analytics.goalsProgress")}</p>
             </div>
             <button className="px-4 py-2 bg-violet-500 hover:bg-purple-500 text-white text-sm font-medium rounded-xl w-full sm:w-auto">
-              Настроить цели
+              {t("analytics.configureGoals")}
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
               {
-                name: "Выручка",
+                name: t("analytics.revenue"),
                 current: totalRevenue,
                 target: dashboardStats?.revenueTarget || totalRevenue * 1.2,
                 color: "bg-violet-500"
               },
               {
-                name: "Новые клиенты",
+                name: t("analytics.newClients"),
                 current: newClients,
                 target: dashboardStats?.clientsTarget || Math.ceil(newClients * 1.1),
                 color: "bg-green-500"
               },
               {
-                name: "Закрытые сделки",
+                name: t("analytics.closedDeals"),
                 current: totalDeals,
                 target: dashboardStats?.dealsTarget || Math.ceil(totalDeals * 1.3),
                 color: "bg-purple-500"
@@ -688,7 +690,7 @@ export default function AnalyticsPage() {
                         : goal.current}
                     </span>
                     <span className="text-gray-500">
-                      из {typeof goal.target === "number" && goal.target > 10000
+                      {t("analytics.outOf")} {typeof goal.target === "number" && goal.target > 10000
                         ? formatCompact(goal.target)
                         : Math.round(goal.target)}
                     </span>

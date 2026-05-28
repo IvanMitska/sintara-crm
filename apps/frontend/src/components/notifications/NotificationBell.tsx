@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { notificationsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Notification {
   id: string;
@@ -43,22 +44,26 @@ const TYPE_ICONS: Record<string, any> = {
   lead_converted: Zap,
 };
 
-function formatRelative(dateString: string) {
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+function formatRelative(dateString: string, t: TFn, locale: string) {
   const diff = Date.now() - new Date(dateString).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "только что";
-  if (mins < 60) return `${mins} мин назад`;
+  if (mins < 1) return t("notifications.justNow");
+  if (mins < 60) return t("notifications.minAgo", { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} ч назад`;
+  if (hrs < 24) return t("notifications.hourAgo", { count: hrs });
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} д назад`;
-  return new Date(dateString).toLocaleDateString("ru-RU", {
+  if (days < 7) return t("notifications.dayAgo", { count: days });
+  return new Date(dateString).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
   });
 }
 
 export function NotificationBell() {
+  const { t, language } = useTranslation();
+  const locale = language === "ru" ? "ru-RU" : "en-US";
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,11 +88,11 @@ export function NotificationBell() {
       setNotifications(list);
       setUnreadCount(list.filter((n: Notification) => !n.isRead).length);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось загрузить уведомления");
+      toast.error(e.response?.data?.message || t("notifications.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // initial count + poll
   useEffect(() => {
@@ -136,11 +141,11 @@ export function NotificationBell() {
     setUnreadCount(0);
     try {
       await notificationsApi.markAllAsRead();
-      toast.success("Все уведомления прочитаны");
+      toast.success(t("notifications.allRead"));
     } catch (e: any) {
       setNotifications(prev);
       fetchUnreadCount();
-      toast.error(e.response?.data?.message || "Не удалось обновить");
+      toast.error(e.response?.data?.message || t("notifications.updateError"));
     }
   };
 
@@ -153,7 +158,7 @@ export function NotificationBell() {
     } catch (e: any) {
       setNotifications(prev);
       fetchUnreadCount();
-      toast.error(e.response?.data?.message || "Не удалось удалить");
+      toast.error(e.response?.data?.message || t("notifications.deleteError"));
     }
   };
 
@@ -162,7 +167,7 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="relative p-2.5 rounded-xl hover:bg-white/10"
-        aria-label="Уведомления"
+        aria-label={t("notifications.title")}
       >
         <Bell size={20} className="text-gray-400" />
         {unreadCount > 0 && (
@@ -185,10 +190,10 @@ export function NotificationBell() {
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/[0.02]">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white text-[15px]">Уведомления</h3>
+              <h3 className="font-semibold text-white text-[15px]">{t("notifications.title")}</h3>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full bg-violet-500/25 text-violet-300 text-[11px] font-semibold">
-                  {unreadCount} новых
+                  {t("notifications.new", { count: unreadCount })}
                 </span>
               )}
             </div>
@@ -196,10 +201,10 @@ export function NotificationBell() {
               <button
                 onClick={handleMarkAllAsRead}
                 className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1.5 font-medium"
-                title="Отметить все прочитанными"
+                title={t("notifications.markAllReadFull")}
               >
                 <CheckCheck className="w-3.5 h-3.5" />
-                Всё прочитано
+                {t("notifications.markAllRead")}
               </button>
             )}
           </div>
@@ -214,7 +219,7 @@ export function NotificationBell() {
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
                   <Bell className="w-6 h-6 text-gray-500" />
                 </div>
-                <p className="text-sm text-gray-400">Пока нет уведомлений</p>
+                <p className="text-sm text-gray-400">{t("notifications.empty")}</p>
               </div>
             ) : (
               <ul className="divide-y divide-white/[0.06]">
@@ -261,7 +266,7 @@ export function NotificationBell() {
                           {n.content}
                         </p>
                         <p className="text-[11px] text-gray-500 mt-1.5 font-medium">
-                          {formatRelative(n.createdAt)}
+                          {formatRelative(n.createdAt, t, locale)}
                         </p>
                       </div>
 
@@ -272,7 +277,7 @@ export function NotificationBell() {
                               e.stopPropagation();
                               handleMarkAsRead(n);
                             }}
-                            title="Отметить прочитанным"
+                            title={t("notifications.markRead")}
                             className="p-1 rounded-md text-gray-400 hover:bg-white/10 hover:text-white"
                           >
                             <Check className="w-3.5 h-3.5" />
@@ -283,7 +288,7 @@ export function NotificationBell() {
                             e.stopPropagation();
                             handleDelete(n);
                           }}
-                          title="Удалить"
+                          title={t("notifications.delete")}
                           className="p-1 rounded-md text-gray-400 hover:bg-red-500/20 hover:text-red-400"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

@@ -19,21 +19,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { useAuthStore } from "@/store/auth";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Mail, Lock, Shield } from "lucide-react";
 
-const loginSchema = z.object({
-  email: z.string().email("Некорректный email"),
-  password: z.string().min(6, "Пароль должен содержать минимум 6 символов"),
-  twoFactorCode: z.string().optional(),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = {
+  email: string;
+  password: string;
+  twoFactorCode?: string;
+};
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const login = useAuthStore((state) => state.login);
+
+  const loginSchema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(6, t("auth.passwordMin")),
+    twoFactorCode: z.string().optional(),
+  });
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,13 +58,13 @@ export default function LoginPage() {
 
       if (result.requiresTwoFactor) {
         setRequiresTwoFactor(true);
-        toast.info("Введите код двухфакторной аутентификации");
+        toast.info(t("auth.enterTwoFactor"));
       } else {
-        toast.success("Вход выполнен успешно");
+        toast.success(t("auth.loginSuccess"));
         router.push("/dashboard");
       }
     } catch (error: any) {
-      toast.error(error.message || "Ошибка входа");
+      toast.error(error.message || t("auth.loginError"));
     } finally {
       setIsLoading(false);
     }
@@ -68,10 +74,10 @@ export default function LoginPage() {
     <div className="animate-stagger">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-2">
-          Добро пожаловать
+          {t("auth.welcome")}
         </h2>
         <p className="text-gray-400">
-          Войдите в свой аккаунт
+          {t("auth.loginToAccount")}
         </p>
       </div>
 
@@ -105,7 +111,7 @@ export default function LoginPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-gray-300 text-sm font-medium">Пароль</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.password")}</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -129,7 +135,7 @@ export default function LoginPage() {
               name="twoFactorCode"
               render={({ field }) => (
                 <FormItem className="animate-in fade-in slide-in-from-top-2 duration-200">
-                  <FormLabel className="text-gray-300 text-sm font-medium">Код 2FA</FormLabel>
+                  <FormLabel className="text-gray-300 text-sm font-medium">{t("auth.twoFactorCode")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
@@ -154,7 +160,7 @@ export default function LoginPage() {
               href="/forgot-password"
               className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
             >
-              Забыли пароль?
+              {t("auth.forgotPassword")}
             </Link>
           </div>
 
@@ -166,7 +172,7 @@ export default function LoginPage() {
             {isLoading ? (
               <Icons.spinner className="h-5 w-5 animate-spin" />
             ) : (
-              "Войти"
+              t("auth.login")
             )}
           </Button>
         </form>
@@ -174,12 +180,12 @@ export default function LoginPage() {
 
       <div className="mt-8 text-center">
         <p className="text-gray-400">
-          Нет аккаунта?{" "}
+          {t("auth.noAccount")}{" "}
           <Link
             href="/register"
             className="text-violet-400 hover:text-violet-300 font-medium transition-colors"
           >
-            Зарегистрироваться
+            {t("auth.register")}
           </Link>
         </p>
       </div>

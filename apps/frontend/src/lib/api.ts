@@ -168,7 +168,7 @@ export const usersApi = {
   getMe: () => api.get('/users/me'),
   getStats: (id: string) => api.get(`/users/${id}/stats`),
   getOnline: () => api.get('/users/online'),
-  update: (id: string, data: { firstName?: string; lastName?: string; middleName?: string; phone?: string; avatar?: string }) =>
+  update: (id: string, data: { firstName?: string; lastName?: string; middleName?: string; phone?: string; avatar?: string; language?: string }) =>
     api.patch(`/users/${id}`, data),
   updateRole: (id: string, role: string) => api.patch(`/users/${id}/role`, { role }),
   toggleActive: (id: string) => api.patch(`/users/${id}/toggle-active`),

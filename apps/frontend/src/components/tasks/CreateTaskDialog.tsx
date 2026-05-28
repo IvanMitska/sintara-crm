@@ -27,6 +27,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,24 +73,24 @@ type ReminderType = "none" | "15min" | "30min" | "1hour" | "1day" | "custom";
 type RepeatType = "none" | "daily" | "weekly" | "monthly" | "custom";
 
 const REMINDER_OPTIONS = [
-  { value: "none", label: "Без напоминания" },
-  { value: "15min", label: "За 15 минут" },
-  { value: "30min", label: "За 30 минут" },
-  { value: "1hour", label: "За 1 час" },
-  { value: "1day", label: "За 1 день" },
+  { value: "none", labelKey: "tasks.reminderNone" },
+  { value: "15min", labelKey: "tasks.reminder15min" },
+  { value: "30min", labelKey: "tasks.reminder30min" },
+  { value: "1hour", labelKey: "tasks.reminder1hour" },
+  { value: "1day", labelKey: "tasks.reminder1day" },
 ];
 
 const REPEAT_OPTIONS = [
-  { value: "none", label: "Не повторять" },
-  { value: "daily", label: "Каждый день" },
-  { value: "weekly", label: "Каждую неделю" },
-  { value: "monthly", label: "Каждый месяц" },
+  { value: "none", labelKey: "tasks.repeatNone" },
+  { value: "daily", labelKey: "tasks.repeatDaily" },
+  { value: "weekly", labelKey: "tasks.repeatWeekly" },
+  { value: "monthly", labelKey: "tasks.repeatMonthly" },
 ];
 
 const PRIORITY_OPTIONS = [
   {
     value: "URGENT",
-    label: "Срочный",
+    labelKey: "tasks.priorityUrgent",
     icon: AlertCircle,
     color: "text-red-400",
     bg: "bg-red-500/20",
@@ -97,7 +98,7 @@ const PRIORITY_OPTIONS = [
   },
   {
     value: "HIGH",
-    label: "Высокий",
+    labelKey: "tasks.priorityHigh",
     icon: Flag,
     color: "text-orange-400",
     bg: "bg-orange-500/20",
@@ -105,7 +106,7 @@ const PRIORITY_OPTIONS = [
   },
   {
     value: "MEDIUM",
-    label: "Средний",
+    labelKey: "tasks.priorityMedium",
     icon: Minus,
     color: "text-yellow-400",
     bg: "bg-yellow-500/20",
@@ -113,7 +114,7 @@ const PRIORITY_OPTIONS = [
   },
   {
     value: "LOW",
-    label: "Низкий",
+    labelKey: "tasks.priorityLow",
     icon: ArrowDown,
     color: "text-green-400",
     bg: "bg-green-500/20",
@@ -134,6 +135,7 @@ export function CreateTaskDialog({
   prefillContactId,
   prefillTitle,
 }: CreateTaskDialogProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
@@ -303,14 +305,21 @@ export function CreateTaskDialog({
   const selectedAssignee = assignees.find((a) => a.id === assigneeId);
   const selectedPriority = PRIORITY_OPTIONS.find((p) => p.value === priority);
 
+  const statusLabelKeys: Record<TaskStatus, string> = {
+    PENDING: "tasks.statusPending",
+    IN_PROGRESS: "tasks.statusInProgress",
+    COMPLETED: "tasks.statusCompleted",
+    CANCELLED: "tasks.statusCancelled",
+  };
+
   const quickDueDates = [
     {
-      label: "Сегодня",
+      label: t("tasks.today"),
       sublabel: new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       getValue: () => new Date().toISOString().split("T")[0],
     },
     {
-      label: "Завтра",
+      label: t("tasks.tomorrow"),
       sublabel: new Date(Date.now() + 86400000).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       getValue: () => {
         const d = new Date();
@@ -319,7 +328,7 @@ export function CreateTaskDialog({
       },
     },
     {
-      label: "Через 3 дня",
+      label: t("tasks.inThreeDays"),
       sublabel: new Date(Date.now() + 259200000).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       getValue: () => {
         const d = new Date();
@@ -328,7 +337,7 @@ export function CreateTaskDialog({
       },
     },
     {
-      label: "Через неделю",
+      label: t("tasks.inOneWeek"),
       sublabel: new Date(Date.now() + 604800000).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       getValue: () => {
         const d = new Date();
@@ -349,10 +358,10 @@ export function CreateTaskDialog({
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <h2 className="text-xl font-semibold text-white tracking-tight">
-                  {editTask ? "Редактирование задачи" : "Новая задача"}
+                  {editTask ? t("tasks.editTask") : t("tasks.newTask")}
                 </h2>
                 <p className="text-sm text-gray-400">
-                  {editTask ? "Внесите необходимые изменения" : "Заполните информацию для создания задачи"}
+                  {editTask ? t("tasks.editSubtitle") : t("tasks.createSubtitle")}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -361,7 +370,7 @@ export function CreateTaskDialog({
                   "bg-violet-500/20 text-violet-400"
                 )}>
                   <div className={cn("w-2 h-2 rounded-full", STATUS_CONFIG[status].color)} />
-                  {STATUS_CONFIG[status].label}
+                  {t(statusLabelKeys[status])}
                 </div>
               </div>
             </div>
@@ -379,7 +388,7 @@ export function CreateTaskDialog({
                   <div className="space-y-2">
                     <Input
                       ref={titleRef}
-                      placeholder="Введите название задачи..."
+                      placeholder={t("tasks.titlePlaceholder")}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className={cn(
@@ -392,9 +401,9 @@ export function CreateTaskDialog({
 
                   {/* Description */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-300">Описание</Label>
+                    <Label className="text-sm font-medium text-gray-300">{t("tasks.description")}</Label>
                     <Textarea
-                      placeholder="Опишите задачу подробнее..."
+                      placeholder={t("tasks.descriptionPlaceholder")}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       className={cn(
@@ -409,10 +418,10 @@ export function CreateTaskDialog({
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                         <Check className="h-4 w-4 text-gray-500" />
-                        Чеклист
+                        {t("tasks.checklist")}
                         {checklist.length > 0 && (
                           <span className="text-xs text-gray-500 font-normal">
-                            {completedCount} из {checklist.length}
+                            {t("tasks.checklistProgress", { done: completedCount, total: checklist.length })}
                           </span>
                         )}
                       </Label>
@@ -479,7 +488,7 @@ export function CreateTaskDialog({
 
                       <div className="flex gap-2">
                         <Input
-                          placeholder="+ Добавить пункт..."
+                          placeholder={t("tasks.addChecklistItem")}
                           value={newChecklistItem}
                           onChange={(e) => setNewChecklistItem(e.target.value)}
                           onKeyDown={(e) => {
@@ -498,7 +507,7 @@ export function CreateTaskDialog({
                             onClick={addChecklistItem}
                             className="  border-white/10 hover:bg-white/5"
                           >
-                            Добавить
+                            {t("common.add")}
                           </Button>
                         )}
                       </div>
@@ -509,7 +518,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-gray-300 flex items-center gap-2">
                       <Tag className="h-4 w-4 text-gray-500" />
-                      Теги
+                      {t("tasks.tags")}
                     </Label>
                     <div className="flex flex-wrap items-center gap-2">
                       {tags.map((tag, index) => (
@@ -536,7 +545,7 @@ export function CreateTaskDialog({
                       ))}
                       <div className="flex items-center">
                         <Input
-                          placeholder="Добавить тег..."
+                          placeholder={t("tasks.addTag")}
                           value={newTag}
                           onChange={(e) => setNewTag(e.target.value)}
                           onKeyDown={(e) => {
@@ -561,7 +570,7 @@ export function CreateTaskDialog({
                         "h-4 w-4 ",
                         showMoreOptions && "rotate-90"
                       )} />
-                      Дополнительные настройки
+                      {t("tasks.moreOptions")}
                     </button>
 
                     <div className={cn(
@@ -574,7 +583,7 @@ export function CreateTaskDialog({
                             <div className="space-y-2">
                               <Label className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Bell className="h-3.5 w-3.5" />
-                                Напоминание
+                                {t("tasks.reminder")}
                               </Label>
                               <Select value={reminder} onValueChange={(v) => setReminder(v as ReminderType)}>
                                 <SelectTrigger className="bg-[#0d0d14] h-9 text-sm border-white/10 text-white">
@@ -583,7 +592,7 @@ export function CreateTaskDialog({
                                 <SelectContent className="bg-[#0d0d14] border-white/10">
                                   {REMINDER_OPTIONS.map((opt) => (
                                     <SelectItem key={opt.value} value={opt.value} className="text-gray-300 focus:bg-white/5">
-                                      {opt.label}
+                                      {t(opt.labelKey)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -592,7 +601,7 @@ export function CreateTaskDialog({
                             <div className="space-y-2">
                               <Label className="text-xs text-gray-400 flex items-center gap-1.5">
                                 <Repeat className="h-3.5 w-3.5" />
-                                Повторение
+                                {t("tasks.repeat")}
                               </Label>
                               <Select value={repeat} onValueChange={(v) => setRepeat(v as RepeatType)}>
                                 <SelectTrigger className="bg-[#0d0d14] h-9 text-sm border-white/10 text-white">
@@ -601,7 +610,7 @@ export function CreateTaskDialog({
                                 <SelectContent className="bg-[#0d0d14] border-white/10">
                                   {REPEAT_OPTIONS.map((opt) => (
                                     <SelectItem key={opt.value} value={opt.value} className="text-gray-300 focus:bg-white/5">
-                                      {opt.label}
+                                      {t(opt.labelKey)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -612,10 +621,10 @@ export function CreateTaskDialog({
                           <div className="space-y-2">
                             <Label className="text-xs text-gray-400 flex items-center gap-1.5">
                               <Timer className="h-3.5 w-3.5" />
-                              Оценка времени
+                              {t("tasks.estimatedTime")}
                             </Label>
                             <Input
-                              placeholder="например: 2ч 30мин"
+                              placeholder={t("tasks.estimatedTimePlaceholder")}
                               value={estimatedTime}
                               onChange={(e) => setEstimatedTime(e.target.value)}
                               className="bg-[#0d0d14] h-9 text-sm border-white/10 text-white"
@@ -625,12 +634,12 @@ export function CreateTaskDialog({
                           <div className="space-y-2">
                             <Label className="text-xs text-gray-400 flex items-center gap-1.5">
                               <Paperclip className="h-3.5 w-3.5" />
-                              Файлы
+                              {t("tasks.files")}
                             </Label>
                             <div className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center hover:border-white/20 hover:bg-white/5  cursor-pointer group">
                               <Paperclip className="h-5 w-5 mx-auto text-gray-600 mb-1 group-hover:text-gray-400 " />
                               <p className="text-xs text-gray-500">
-                                Перетащите или <span className="text-gray-300">выберите файл</span>
+                                {t("tasks.dropFilesPrefix")} <span className="text-gray-300">{t("tasks.chooseFile")}</span>
                               </p>
                             </div>
                           </div>
@@ -653,7 +662,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <User className="h-3.5 w-3.5" />
-                      Исполнитель
+                      {t("tasks.assignee")}
                     </Label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -673,7 +682,7 @@ export function CreateTaskDialog({
                                 <p className="font-medium text-sm text-white truncate">
                                   {selectedAssignee.name}
                                 </p>
-                                <p className="text-xs text-gray-500">Ответственный</p>
+                                <p className="text-xs text-gray-500">{t("tasks.responsible")}</p>
                               </div>
                             </>
                           ) : (
@@ -682,7 +691,7 @@ export function CreateTaskDialog({
                                 <Plus className="h-4 w-4 text-gray-500" />
                               </div>
                               <div className="flex-1">
-                                <p className="text-sm text-gray-500">Назначить</p>
+                                <p className="text-sm text-gray-500">{t("tasks.assign")}</p>
                               </div>
                             </>
                           )}
@@ -691,7 +700,7 @@ export function CreateTaskDialog({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-[288px] bg-[#0d0d14] border-white/10">
                         <div className="p-2">
-                          <Input placeholder="Поиск..." className="h-8 text-sm bg-white/5 border-white/10 text-white" />
+                          <Input placeholder={t("common.search")} className="h-8 text-sm bg-white/5 border-white/10 text-white" />
                         </div>
                         <DropdownMenuSeparator className="bg-white/5" />
                         <DropdownMenuItem onClick={() => setAssigneeId("")} className="p-2 focus:bg-white/5">
@@ -699,7 +708,7 @@ export function CreateTaskDialog({
                             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-white/5">
                               <X className="h-4 w-4 text-gray-500" />
                             </div>
-                            <span className="text-gray-400 text-sm">Без исполнителя</span>
+                            <span className="text-gray-400 text-sm">{t("tasks.unassigned")}</span>
                           </div>
                         </DropdownMenuItem>
                         {assignees.map((assignee) => (
@@ -730,7 +739,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <Eye className="h-3.5 w-3.5" />
-                      Наблюдатели
+                      {t("tasks.observers")}
                     </Label>
                     <div className="flex flex-wrap gap-2">
                       {observerIds.map((id) => {
@@ -760,7 +769,7 @@ export function CreateTaskDialog({
                         <DropdownMenuTrigger asChild>
                           <button className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-white/5 border border-dashed border-white/20 rounded-full ">
                             <Plus className="h-3 w-3" />
-                            Добавить
+                            {t("common.add")}
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="bg-[#0d0d14] border-white/10">
@@ -791,7 +800,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <Calendar className="h-3.5 w-3.5" />
-                      Срок
+                      {t("tasks.dueDate")}
                     </Label>
                     <div className="grid grid-cols-2 gap-2">
                       {quickDueDates.map((item) => (
@@ -841,7 +850,7 @@ export function CreateTaskDialog({
                         }}
                         className="text-xs text-gray-500 hover:text-red-400 "
                       >
-                        Очистить
+                        {t("tasks.clear")}
                       </button>
                     )}
                   </div>
@@ -850,7 +859,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <Flag className="h-3.5 w-3.5" />
-                      Приоритет
+                      {t("tasks.priority")}
                     </Label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -865,7 +874,7 @@ export function CreateTaskDialog({
                               </div>
                               <div className="flex-1">
                                 <p className="font-medium text-sm text-white">
-                                  {selectedPriority.label}
+                                  {t(selectedPriority.labelKey)}
                                 </p>
                               </div>
                               <div className={cn("w-2.5 h-2.5 rounded-full", selectedPriority.dot)} />
@@ -885,7 +894,7 @@ export function CreateTaskDialog({
                               <div className={cn("p-2 rounded-lg", option.bg)}>
                                 <option.icon className={cn("h-4 w-4", option.color)} />
                               </div>
-                              <span className="text-sm flex-1 text-gray-200">{option.label}</span>
+                              <span className="text-sm flex-1 text-gray-200">{t(option.labelKey)}</span>
                               <div className={cn("w-2.5 h-2.5 rounded-full", option.dot)} />
                               {priority === option.value && (
                                 <Check className="h-4 w-4 text-violet-400 ml-2" />
@@ -901,7 +910,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5" />
-                      Статус
+                      {t("tasks.status")}
                     </Label>
                     <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
                       <SelectTrigger className="bg-white/5 h-11 border-white/10 text-white">
@@ -912,7 +921,7 @@ export function CreateTaskDialog({
                           <SelectItem key={key} value={key} className="text-gray-300 focus:bg-white/5">
                             <div className="flex items-center gap-2">
                               <div className={cn("w-2 h-2 rounded-full", config.color)} />
-                              {config.label}
+                              {t(statusLabelKeys[key as TaskStatus])}
                             </div>
                           </SelectItem>
                         ))}
@@ -924,7 +933,7 @@ export function CreateTaskDialog({
                   <div className="space-y-3">
                     <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                       <Link2 className="h-3.5 w-3.5" />
-                      Связи
+                      {t("tasks.links")}
                     </Label>
                     <div className="space-y-2">
                       <Select
@@ -934,11 +943,11 @@ export function CreateTaskDialog({
                         <SelectTrigger className="bg-white/5 h-10 border-white/10 text-white">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-gray-500" />
-                            <SelectValue placeholder="Контакт" />
+                            <SelectValue placeholder={t("common.contact")} />
                           </div>
                         </SelectTrigger>
                         <SelectContent className="bg-[#0d0d14] border-white/10">
-                          <SelectItem value="_none" className="text-gray-400 focus:bg-white/5">Без контакта</SelectItem>
+                          <SelectItem value="_none" className="text-gray-400 focus:bg-white/5">{t("tasks.noContact")}</SelectItem>
                           {contacts.map((contact) => (
                             <SelectItem key={contact.id} value={contact.id} className="text-gray-300 focus:bg-white/5">
                               {contact.name}
@@ -954,11 +963,11 @@ export function CreateTaskDialog({
                         <SelectTrigger className="bg-white/5 h-10 border-white/10 text-white">
                           <div className="flex items-center gap-2">
                             <Briefcase className="h-4 w-4 text-gray-500" />
-                            <SelectValue placeholder="Сделка" />
+                            <SelectValue placeholder={t("tasks.deal")} />
                           </div>
                         </SelectTrigger>
                         <SelectContent className="bg-[#0d0d14] border-white/10">
-                          <SelectItem value="_none" className="text-gray-400 focus:bg-white/5">Без сделки</SelectItem>
+                          <SelectItem value="_none" className="text-gray-400 focus:bg-white/5">{t("tasks.noDeal")}</SelectItem>
                           {deals.map((deal) => (
                             <SelectItem key={deal.id} value={deal.id} className="text-gray-300 focus:bg-white/5">
                               {deal.title}
@@ -995,7 +1004,7 @@ export function CreateTaskDialog({
                 onClick={() => onOpenChange(false)}
                 className="text-gray-400 hover:text-white hover:bg-white/5"
               >
-                Отмена
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleSubmit}
@@ -1008,17 +1017,17 @@ export function CreateTaskDialog({
                 {isSubmitting ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Создание...</span>
+                    <span>{t("tasks.creating")}</span>
                   </div>
                 ) : editTask ? (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Сохранить
+                    {t("common.save")}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Создать задачу
+                    {t("tasks.createTask")}
                   </>
                 )}
               </Button>

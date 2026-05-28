@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { tasksApi, contactsApi, dealsApi } from "@/lib/api";
 import {
   Task,
@@ -31,6 +32,7 @@ import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 
 export default function TasksPage() {
+  const { t } = useTranslation();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [assignees, setAssignees] = useState<Array<{ id: string; name: string }>>([]);
   const [contacts, setContacts] = useState<Array<{ id: string; name: string }>>([]);
@@ -60,15 +62,15 @@ export default function TasksPage() {
         ]);
 
         const tasksData = tasksRes.data?.items || tasksRes.data?.data || tasksRes.data || [];
-        const tasksArray = (Array.isArray(tasksData) ? tasksData : []).map((t: any) => ({
-          ...t,
-          assignee: t.assignee
+        const tasksArray = (Array.isArray(tasksData) ? tasksData : []).map((item: any) => ({
+          ...item,
+          assignee: item.assignee
             ? {
-                ...t.assignee,
+                ...item.assignee,
                 name:
-                  t.assignee.name ||
-                  `${t.assignee.firstName || ""} ${t.assignee.lastName || ""}`.trim() ||
-                  t.assignee.email ||
+                  item.assignee.name ||
+                  `${item.assignee.firstName || ""} ${item.assignee.lastName || ""}`.trim() ||
+                  item.assignee.email ||
                   "—",
               }
             : undefined,
@@ -286,35 +288,35 @@ export default function TasksPage() {
       <div className="px-4 sm:px-6 py-4 glass-card border-b border-white/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 sm:gap-6">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Задачи</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">{t("tasks.title")}</h1>
 
             {/* Stats Pills */}
             <div className="hidden lg:flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
                 <ListTodo className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm text-gray-400">{t("tasks.statTotal")}</span>
                 <span className="text-sm font-bold text-white">{stats.total}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 rounded-lg">
                 <PlayCircle className="w-4 h-4 text-violet-500" />
-                <span className="text-sm text-violet-300">В работе</span>
+                <span className="text-sm text-violet-300">{t("tasks.statusInProgress")}</span>
                 <span className="text-sm font-bold text-violet-300">{stats.inProgress}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-lg">
                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-green-300">Готово</span>
+                <span className="text-sm text-green-300">{t("tasks.statDone")}</span>
                 <span className="text-sm font-bold text-green-300">{stats.completed}</span>
               </div>
               {stats.overdue > 0 && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 rounded-lg">
                   <AlertTriangle className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-red-300">Просрочено</span>
+                  <span className="text-sm text-red-300">{t("tasks.overdueShort")}</span>
                   <span className="text-sm font-bold text-red-300">{stats.overdue}</span>
                 </div>
               )}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 rounded-lg">
                 <Clock className="w-4 h-4 text-amber-500" />
-                <span className="text-sm text-amber-300">Сегодня</span>
+                <span className="text-sm text-amber-300">{t("tasks.today")}</span>
                 <span className="text-sm font-bold text-amber-300">{stats.dueToday}</span>
               </div>
             </div>
@@ -337,7 +339,7 @@ export default function TasksPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск..."
+                placeholder={t("common.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full sm:w-48 lg:w-64 pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm text-white placeholder-gray-400 border border-white/10 focus:ring-2 focus:ring-violet-500 focus:bg-white/10"
@@ -370,7 +372,7 @@ export default function TasksPage() {
               className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:from-violet-600 hover:to-purple-600 shadow-sm"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Новая задача</span>
+              <span className="hidden sm:inline">{t("tasks.newTask")}</span>
             </button>
           </div>
         </div>
@@ -385,10 +387,10 @@ export default function TasksPage() {
                 onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
                 className="px-4 py-2 bg-white/5 text-white rounded-xl text-sm border border-white/10 focus:ring-2 focus:ring-violet-500"
               >
-                <option value="ALL">Все статусы</option>
-                <option value="PENDING">Ожидают</option>
-                <option value="IN_PROGRESS">В работе</option>
-                <option value="COMPLETED">Выполнено</option>
+                <option value="ALL">{t("tasks.allStatuses")}</option>
+                <option value="PENDING">{t("tasks.statusPending")}</option>
+                <option value="IN_PROGRESS">{t("tasks.statusInProgress")}</option>
+                <option value="COMPLETED">{t("tasks.statusCompleted")}</option>
               </select>
 
               {/* Priority Filter */}
@@ -397,11 +399,11 @@ export default function TasksPage() {
                 onChange={(e) => setFilters({ ...filters, priority: e.target.value as any })}
                 className="px-4 py-2 bg-white/5 text-white rounded-xl text-sm border border-white/10 focus:ring-2 focus:ring-violet-500"
               >
-                <option value="ALL">Все приоритеты</option>
-                <option value="URGENT">Срочный</option>
-                <option value="HIGH">Высокий</option>
-                <option value="MEDIUM">Средний</option>
-                <option value="LOW">Низкий</option>
+                <option value="ALL">{t("tasks.allPriorities")}</option>
+                <option value="URGENT">{t("tasks.priorityUrgent")}</option>
+                <option value="HIGH">{t("tasks.priorityHigh")}</option>
+                <option value="MEDIUM">{t("tasks.priorityMedium")}</option>
+                <option value="LOW">{t("tasks.priorityLow")}</option>
               </select>
 
               {/* Assignee Filter */}
@@ -410,9 +412,9 @@ export default function TasksPage() {
                 onChange={(e) => setFilters({ ...filters, assigneeId: e.target.value || undefined })}
                 className="px-4 py-2 bg-white/5 text-white rounded-xl text-sm border border-white/10 focus:ring-2 focus:ring-violet-500"
               >
-                <option value="">Все исполнители</option>
-                <option value="current">Мои задачи</option>
-                <option value="unassigned">Без исполнителя</option>
+                <option value="">{t("tasks.allAssignees")}</option>
+                <option value="current">{t("tasks.myTasks")}</option>
+                <option value="unassigned">{t("tasks.unassigned")}</option>
                 {assignees.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -428,7 +430,7 @@ export default function TasksPage() {
                     : "bg-white/5 text-gray-400 hover:bg-white/10"
                 )}
               >
-                Просроченные
+                {t("tasks.overdue")}
               </button>
 
               {/* Clear Filters */}
@@ -438,7 +440,7 @@ export default function TasksPage() {
                   className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
-                  Сбросить
+                  {t("common.reset")}
                 </button>
               )}
             </div>
@@ -460,7 +462,7 @@ export default function TasksPage() {
               )}
             >
               <LayoutList className="w-4 h-4" />
-              <span className="hidden sm:inline">Список</span>
+              <span className="hidden sm:inline">{t("tasks.listView")}</span>
             </button>
             <button
               onClick={() => setViewMode("kanban")}
@@ -472,7 +474,7 @@ export default function TasksPage() {
               )}
             >
               <Kanban className="w-4 h-4" />
-              <span className="hidden sm:inline">Канбан</span>
+              <span className="hidden sm:inline">{t("tasks.kanbanView")}</span>
             </button>
             <button
               onClick={() => setViewMode("calendar")}
@@ -484,23 +486,23 @@ export default function TasksPage() {
               )}
             >
               <CalendarIcon className="w-4 h-4" />
-              <span className="hidden sm:inline">Календарь</span>
+              <span className="hidden sm:inline">{t("tasks.calendarView")}</span>
             </button>
           </div>
 
           {viewMode === "list" && (
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-sm text-gray-400">Группировка:</span>
+              <span className="text-sm text-gray-400">{t("tasks.groupBy")}</span>
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as any)}
                 className="px-3 py-1.5 bg-white/5 text-white rounded-lg text-sm border border-white/10 focus:ring-2 focus:ring-violet-500"
               >
-                <option value="dueDate">По дате</option>
-                <option value="status">По статусу</option>
-                <option value="priority">По приоритету</option>
-                <option value="assignee">По исполнителю</option>
-                <option value="none">Без группировки</option>
+                <option value="dueDate">{t("tasks.groupByDate")}</option>
+                <option value="status">{t("tasks.groupByStatus")}</option>
+                <option value="priority">{t("tasks.groupByPriority")}</option>
+                <option value="assignee">{t("tasks.groupByAssignee")}</option>
+                <option value="none">{t("tasks.groupByNone")}</option>
               </select>
             </div>
           )}
@@ -539,8 +541,8 @@ export default function TasksPage() {
               <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
                 <CalendarIcon className="w-10 h-10 text-gray-500" />
               </div>
-              <p className="text-lg font-semibold text-white">Календарь задач</p>
-              <p className="text-sm text-gray-400 mt-1">Скоро будет доступно</p>
+              <p className="text-lg font-semibold text-white">{t("tasks.calendarTitle")}</p>
+              <p className="text-sm text-gray-400 mt-1">{t("common.comingSoon")}</p>
             </div>
           </div>
         )}
@@ -551,8 +553,8 @@ export default function TasksPage() {
               <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
                 <ListTodo className="w-10 h-10 text-gray-500" />
               </div>
-              <p className="text-lg font-semibold text-white">Задач не найдено</p>
-              <p className="text-sm text-gray-400 mt-1">Попробуйте изменить фильтры или создайте новую задачу</p>
+              <p className="text-lg font-semibold text-white">{t("tasks.notFound")}</p>
+              <p className="text-sm text-gray-400 mt-1">{t("tasks.notFoundHint")}</p>
               <button
                 onClick={() => {
                   setEditTask(null);
@@ -562,7 +564,7 @@ export default function TasksPage() {
                 className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:from-violet-600 hover:to-purple-600"
               >
                 <Plus className="w-4 h-4" />
-                Создать задачу
+                {t("tasks.createTask")}
               </button>
             </div>
           </div>

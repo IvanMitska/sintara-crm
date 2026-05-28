@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { memo, useMemo } from "react";
+import { useTranslation } from "@/components/providers/language-provider";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 
 // Статичный фон - мемоизированный компонент
 const Background = memo(function Background() {
@@ -38,19 +40,23 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const isLogin = pathname === "/login";
 
   const content = useMemo(() => ({
-    headline: isLogin ? "Управляйте бизнесом" : "Начните работу",
-    subheadline: isLogin ? "эффективно" : "прямо сейчас",
-    description: isLogin
-      ? "Современная CRM-система для автоматизации продаж и управления клиентами"
-      : "Создайте аккаунт и получите доступ ко всем возможностям платформы"
-  }), [isLogin]);
+    headline: isLogin ? t("auth.brandHeadlineLogin") : t("auth.brandHeadlineRegister"),
+    subheadline: isLogin ? t("auth.brandSubheadlineLogin") : t("auth.brandSubheadlineRegister"),
+    description: isLogin ? t("auth.brandDescLogin") : t("auth.brandDescRegister"),
+  }), [isLogin, t]);
 
   return (
     <div className="min-h-screen flex bg-[#0A0A0F] relative overflow-hidden">
       <Background />
+
+      {/* Language switcher — available before authentication */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+        <LanguageSwitcher />
+      </div>
 
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative z-10 flex-col items-center justify-center px-8 xl:px-12 pb-16">
@@ -68,10 +74,9 @@ export default function AuthLayout({
           </div>
 
           {/* Headline */}
-          <h1 className="text-5xl xl:text-6xl font-bold text-white mb-6 leading-snug">
-            <span className="whitespace-nowrap">{content.headline}</span>
-            <br />
-            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
+          <h1 className="text-5xl xl:text-6xl font-bold text-white mb-6 leading-tight">
+            <span className="block whitespace-nowrap">{content.headline}</span>
+            <span className="block mt-3 pb-2 leading-[1.15] bg-gradient-to-r from-violet-400 via-purple-400 to-violet-400 bg-clip-text text-transparent">
               {content.subheadline}
             </span>
           </h1>
@@ -103,7 +108,7 @@ export default function AuthLayout({
 
           {/* Footer */}
           <p className="mt-8 text-center text-sm text-gray-600 animate-fade-in-delay">
-            © 2026 Sintara CRM. Все права защищены.
+            {t("auth.copyright")}
           </p>
         </div>
       </div>

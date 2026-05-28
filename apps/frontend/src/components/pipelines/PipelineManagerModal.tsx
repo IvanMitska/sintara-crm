@@ -32,6 +32,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { pipelinesApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useTranslation } from "@/components/providers/language-provider";
 
 interface Stage {
   id: string;
@@ -69,6 +70,7 @@ export function PipelineManagerModal({
   initialPipelineId,
   onChanged,
 }: Props) {
+  const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
@@ -125,7 +127,7 @@ export function PipelineManagerModal({
       await pipelinesApi.reorderStages(selected.id, next.map((s) => s.id));
       await onChanged();
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось изменить порядок");
+      toast.error(e?.response?.data?.message || t("pipelines.reorderError"));
       setLocalStages(sortedStages);
     }
   };
@@ -162,7 +164,7 @@ export function PipelineManagerModal({
   const handleSaveMeta = async () => {
     if (!selected) return;
     if (!name.trim()) {
-      toast.error("Название воронки не может быть пустым");
+      toast.error(t("pipelines.errorNameEmpty"));
       return;
     }
     setSavingMeta(true);
@@ -172,9 +174,9 @@ export function PipelineManagerModal({
         isDefault,
       });
       await onChanged();
-      toast.success("Воронка обновлена");
+      toast.success(t("pipelines.updateSuccess"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось сохранить");
+      toast.error(e?.response?.data?.message || t("pipelines.saveError"));
     } finally {
       setSavingMeta(false);
     }
@@ -182,7 +184,7 @@ export function PipelineManagerModal({
 
   const handleCreatePipeline = async () => {
     if (!createName.trim()) {
-      toast.error("Введите название воронки");
+      toast.error(t("pipelines.errorNameEnter"));
       return;
     }
     setCreatingPipeline(true);
@@ -192,9 +194,9 @@ export function PipelineManagerModal({
       setSelectedId(res.data?.id || null);
       setCreateName("");
       setCreateOpen(false);
-      toast.success("Воронка создана");
+      toast.success(t("pipelines.createSuccess"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось создать воронку");
+      toast.error(e?.response?.data?.message || t("pipelines.createError"));
     } finally {
       setCreatingPipeline(false);
     }
@@ -209,9 +211,9 @@ export function PipelineManagerModal({
       setDeletePipelineOpen(false);
       const next = pipelines.find((p) => p.id !== selected.id);
       setSelectedId(next?.id || null);
-      toast.success("Воронка удалена");
+      toast.success(t("pipelines.deleteSuccess"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось удалить воронку");
+      toast.error(e?.response?.data?.message || t("pipelines.deleteError"));
     } finally {
       setBusy(false);
     }
@@ -220,7 +222,7 @@ export function PipelineManagerModal({
   const handleAddStage = async () => {
     if (!selected) return;
     if (!newStageName.trim()) {
-      toast.error("Введите название стадии");
+      toast.error(t("pipelines.errorStageNameEnter"));
       return;
     }
     setCreatingStage(true);
@@ -232,9 +234,9 @@ export function PipelineManagerModal({
       await onChanged();
       setNewStageName("");
       setNewStageColor(COLOR_PALETTE[0]);
-      toast.success("Стадия добавлена");
+      toast.success(t("pipelines.stageAdded"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось добавить стадию");
+      toast.error(e?.response?.data?.message || t("pipelines.stageAddError"));
     } finally {
       setCreatingStage(false);
     }
@@ -248,7 +250,7 @@ export function PipelineManagerModal({
 
   const handleSaveStage = async (s: Stage) => {
     if (!editingStageName.trim()) {
-      toast.error("Название стадии не может быть пустым");
+      toast.error(t("pipelines.errorStageNameEmpty"));
       return;
     }
     setSavingStageId(s.id);
@@ -260,7 +262,7 @@ export function PipelineManagerModal({
       await onChanged();
       setEditingStageId(null);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось сохранить стадию");
+      toast.error(e?.response?.data?.message || t("pipelines.stageSaveError"));
     } finally {
       setSavingStageId(null);
     }
@@ -273,9 +275,9 @@ export function PipelineManagerModal({
       await pipelinesApi.deleteStage(deleteStageId);
       await onChanged();
       setDeleteStageId(null);
-      toast.success("Стадия удалена");
+      toast.success(t("pipelines.stageDeleteSuccess"));
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Не удалось удалить стадию");
+      toast.error(e?.response?.data?.message || t("pipelines.stageDeleteError"));
     } finally {
       setBusy(false);
     }
@@ -289,15 +291,15 @@ export function PipelineManagerModal({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
             <div>
-              <h2 className="text-lg font-bold text-white">Управление воронками</h2>
+              <h2 className="text-lg font-bold text-white">{t("pipelines.manageTitle")}</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Создавайте воронки продаж и настраивайте стадии под свои процессы
+                {t("pipelines.manageSubtitle")}
               </p>
             </div>
             <button
               onClick={onClose}
               className="p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white"
-              aria-label="Закрыть"
+              aria-label={t("common.close")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -313,7 +315,7 @@ export function PipelineManagerModal({
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-xl text-sm font-semibold"
                 >
                   <Plus className="w-4 h-4" />
-                  Новая воронка
+                  {t("pipelines.newPipeline")}
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-minimal">
@@ -335,7 +337,7 @@ export function PipelineManagerModal({
                           {p.name}
                         </div>
                         <div className="text-[11px] text-gray-500 mt-0.5">
-                          {(p.stages?.length ?? 0)} {pluralStages(p.stages?.length ?? 0)}
+                          {t("pipelines.stagesCount", { count: p.stages?.length ?? 0 })}
                         </div>
                       </div>
                       {p.isDefault && (
@@ -346,7 +348,7 @@ export function PipelineManagerModal({
                 })}
                 {pipelines.length === 0 && (
                   <div className="text-center text-sm text-gray-500 px-4 py-8">
-                    Воронок пока нет
+                    {t("pipelines.noPipelines")}
                   </div>
                 )}
               </div>
@@ -356,7 +358,7 @@ export function PipelineManagerModal({
             <section className="flex flex-col min-h-0">
               {!selected ? (
                 <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
-                  Выберите воронку слева или создайте новую
+                  {t("pipelines.selectOrCreate")}
                 </div>
               ) : (
                 <>
@@ -364,14 +366,14 @@ export function PipelineManagerModal({
                   <div className="px-6 py-5 border-b border-white/5 space-y-4">
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">
-                        Название воронки
+                        {t("pipelines.pipelineName")}
                       </label>
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full px-3 py-2.5 bg-black/20 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none"
-                        placeholder="Например: Продажа услуг"
+                        placeholder={t("pipelines.pipelineNamePlaceholder")}
                       />
                     </div>
 
@@ -394,7 +396,7 @@ export function PipelineManagerModal({
                             isDefault ? "text-amber-400 fill-amber-400" : "text-gray-500"
                           )}
                         />
-                        <span className="text-sm text-white">Использовать по умолчанию</span>
+                        <span className="text-sm text-white">{t("pipelines.useAsDefault")}</span>
                       </div>
                       <div
                         className={cn(
@@ -417,7 +419,7 @@ export function PipelineManagerModal({
                         className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-red-400 hover:bg-red-500/10 font-medium"
                       >
                         <Trash2 className="w-4 h-4" />
-                        Удалить воронку
+                        {t("pipelines.deletePipeline")}
                       </button>
                       <button
                         onClick={handleSaveMeta}
@@ -425,7 +427,7 @@ export function PipelineManagerModal({
                         className="px-4 py-2 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center gap-2"
                       >
                         {savingMeta && <Loader2 className="w-4 h-4 animate-spin" />}
-                        Сохранить
+                        {t("common.save")}
                       </button>
                     </div>
                   </div>
@@ -434,10 +436,10 @@ export function PipelineManagerModal({
                   <div className="flex-1 flex flex-col min-h-0">
                     <div className="px-6 pt-5 pb-3 flex items-center justify-between">
                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                        Стадии воронки
+                        {t("pipelines.stagesTitle")}
                       </h3>
                       <span className="text-xs text-gray-500">
-                        {localStages.length} {pluralStages(localStages.length)}
+                        {t("pipelines.stagesCount", { count: localStages.length })}
                       </span>
                     </div>
 
@@ -472,7 +474,7 @@ export function PipelineManagerModal({
 
                       {localStages.length === 0 && (
                         <div className="text-center text-sm text-gray-500 py-8">
-                          В этой воронке пока нет стадий
+                          {t("pipelines.noStages")}
                         </div>
                       )}
                     </div>
@@ -491,7 +493,7 @@ export function PipelineManagerModal({
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleAddStage();
                           }}
-                          placeholder="Название новой стадии"
+                          placeholder={t("pipelines.newStagePlaceholder")}
                           className="flex-1 px-3 py-2 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none"
                         />
                         <button
@@ -504,7 +506,7 @@ export function PipelineManagerModal({
                           ) : (
                             <Plus className="w-4 h-4" />
                           )}
-                          Добавить
+                          {t("common.add")}
                         </button>
                       </div>
                       <div className="mt-3">
@@ -525,7 +527,7 @@ export function PipelineManagerModal({
           <div className="fixed inset-0 bg-black/70 z-[100]" onClick={() => setCreateOpen(false)} />
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none">
             <div className="pointer-events-auto w-full max-w-md bg-[#0d0d18] border border-white/10 rounded-2xl shadow-2xl p-6">
-              <h3 className="text-base font-bold text-white mb-4">Новая воронка</h3>
+              <h3 className="text-base font-bold text-white mb-4">{t("pipelines.newPipeline")}</h3>
               <input
                 type="text"
                 value={createName}
@@ -534,7 +536,7 @@ export function PipelineManagerModal({
                   if (e.key === "Enter") handleCreatePipeline();
                   if (e.key === "Escape") setCreateOpen(false);
                 }}
-                placeholder="Название воронки"
+                placeholder={t("pipelines.pipelineNameShort")}
                 autoFocus
                 className="w-full px-3 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white placeholder-gray-600 focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500/60 outline-none"
               />
@@ -543,7 +545,7 @@ export function PipelineManagerModal({
                   onClick={() => setCreateOpen(false)}
                   className="px-4 py-2 rounded-xl text-sm text-gray-300 hover:bg-white/5"
                 >
-                  Отмена
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleCreatePipeline}
@@ -551,7 +553,7 @@ export function PipelineManagerModal({
                   className="px-4 py-2 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center gap-2"
                 >
                   {creatingPipeline && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Создать
+                  {t("common.create")}
                 </button>
               </div>
             </div>
@@ -563,10 +565,10 @@ export function PipelineManagerModal({
         isOpen={deletePipelineOpen}
         onClose={() => setDeletePipelineOpen(false)}
         onConfirm={handleDeletePipeline}
-        title="Удалить воронку?"
-        description={`Воронка "${selected?.name}" и все её стадии будут удалены. Сделки, привязанные к стадиям, заблокируют удаление.`}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("pipelines.deletePipelineConfirm")}
+        description={t("pipelines.deletePipelineConfirmDesc", { name: selected?.name ?? "" })}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={busy}
       />
@@ -575,10 +577,10 @@ export function PipelineManagerModal({
         isOpen={!!deleteStageId}
         onClose={() => setDeleteStageId(null)}
         onConfirm={handleDeleteStage}
-        title="Удалить стадию?"
-        description="Если на этой стадии есть сделки, удаление будет заблокировано."
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("pipelines.deleteStageConfirm")}
+        description={t("pipelines.deleteStageConfirmDesc")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={busy}
       />
@@ -611,6 +613,7 @@ function SortableStageRow({
   onSaveEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -645,7 +648,7 @@ function SortableStageRow({
             "p-1 -m-1 rounded touch-none flex-shrink-0",
             isEditing ? "cursor-not-allowed opacity-30" : "cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300"
           )}
-          aria-label="Перетащить"
+          aria-label={t("pipelines.dragStage")}
           disabled={isEditing}
         >
           <GripVertical className="w-4 h-4" />
@@ -665,7 +668,7 @@ function SortableStageRow({
                 onClick={onSaveEdit}
                 disabled={isSaving}
                 className="p-2 rounded-lg bg-violet-500 hover:bg-violet-600 text-white disabled:opacity-50"
-                title="Сохранить"
+                title={t("common.save")}
               >
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -676,7 +679,7 @@ function SortableStageRow({
               <button
                 onClick={onCancelEdit}
                 className="p-2 rounded-lg hover:bg-white/5 text-gray-400"
-                title="Отменить"
+                title={t("common.cancel")}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -693,14 +696,14 @@ function SortableStageRow({
               <button
                 onClick={onStartEdit}
                 className="p-1.5 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white"
-                title="Редактировать"
+                title={t("common.edit")}
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 onClick={onDelete}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400"
-                title="Удалить"
+                title={t("common.delete")}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -719,6 +722,7 @@ function SortableStageRow({
 }
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       {COLOR_PALETTE.map((c) => {
@@ -733,18 +737,10 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
               active ? "border-white scale-110" : "border-white/10 hover:border-white/30"
             )}
             style={{ backgroundColor: c }}
-            aria-label={`Цвет ${c}`}
+            aria-label={t("pipelines.colorLabel", { color: c })}
           />
         );
       })}
     </div>
   );
-}
-
-function pluralStages(n: number) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return "стадия";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "стадии";
-  return "стадий";
 }

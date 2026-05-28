@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/providers/language-provider";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Task, PRIORITY_CONFIG, STATUS_CONFIG, TaskStatus } from "./types";
+import { Task, TaskStatus } from "./types";
 
 interface TaskDetailSheetProps {
   task: Task | null;
@@ -69,10 +70,24 @@ export function TaskDetailSheet({
   onComplete,
   onStatusChange,
 }: TaskDetailSheetProps) {
+  const { t } = useTranslation();
+
   if (!task) return null;
 
-  const priorityConfig = PRIORITY_CONFIG[task.priority];
-  const statusConfig = STATUS_CONFIG[task.status];
+  const priorityLabelKeys: Record<string, string> = {
+    URGENT: "tasks.priorityUrgent",
+    HIGH: "tasks.priorityHigh",
+    MEDIUM: "tasks.priorityMedium",
+    LOW: "tasks.priorityLow",
+  };
+  const statusLabelKeys: Record<string, string> = {
+    PENDING: "tasks.statusPending",
+    IN_PROGRESS: "tasks.statusInProgress",
+    COMPLETED: "tasks.statusCompleted",
+    CANCELLED: "tasks.statusCancelled",
+  };
+  const priorityLabel = t(priorityLabelKeys[task.priority]);
+  const statusLabel = t(statusLabelKeys[task.status]);
 
   const isOverdue =
     task.dueDate &&
@@ -85,8 +100,8 @@ export function TaskDetailSheet({
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (d.toDateString() === today.toDateString()) return "Сегодня";
-    if (d.toDateString() === tomorrow.toDateString()) return "Завтра";
+    if (d.toDateString() === today.toDateString()) return t("tasks.today");
+    if (d.toDateString() === tomorrow.toDateString()) return t("tasks.tomorrow");
 
     return d.toLocaleDateString("ru-RU", {
       day: "numeric",
@@ -128,8 +143,8 @@ export function TaskDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg p-0 gap-0 bg-[#0d0d14] border-white/10">
-        <SheetTitle className="sr-only">Детали задачи</SheetTitle>
-        <SheetDescription className="sr-only">Просмотр и редактирование задачи</SheetDescription>
+        <SheetTitle className="sr-only">{t("tasks.detailsTitle")}</SheetTitle>
+        <SheetDescription className="sr-only">{t("tasks.detailsDescription")}</SheetDescription>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="px-6 pt-6 pb-5 border-b border-white/5">
@@ -140,14 +155,14 @@ export function TaskDetailSheet({
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
                   <span className={cn("h-2 w-2 rounded-full", STATUS_DOTS[task.status])} />
                   <span className="text-sm font-medium text-gray-300">
-                    {statusConfig.label}
+                    {statusLabel}
                   </span>
                 </div>
                 {/* Overdue Badge */}
                 {isOverdue && (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg">
                     <AlertCircle className="h-3.5 w-3.5" />
-                    <span className="text-sm font-medium">Просрочено</span>
+                    <span className="text-sm font-medium">{t("tasks.overdueShort")}</span>
                   </div>
                 )}
               </div>
@@ -163,18 +178,18 @@ export function TaskDetailSheet({
                   <DropdownMenuContent align="end" className="w-48 bg-[#0d0d14] border-white/10">
                     <DropdownMenuItem onClick={() => onEdit?.(task)} className="focus:bg-white/5">
                       <Edit className="h-4 w-4 mr-2" />
-                      Редактировать
+                      {t("common.edit")}
                     </DropdownMenuItem>
                     {task.status === "PENDING" && (
                       <DropdownMenuItem onClick={() => onStatusChange?.(task.id, "IN_PROGRESS")} className="focus:bg-white/5">
                         <Play className="h-4 w-4 mr-2" />
-                        Начать выполнение
+                        {t("tasks.startProgress")}
                       </DropdownMenuItem>
                     )}
                     {task.status === "IN_PROGRESS" && (
                       <DropdownMenuItem onClick={() => onStatusChange?.(task.id, "PENDING")} className="focus:bg-white/5">
                         <Pause className="h-4 w-4 mr-2" />
-                        Приостановить
+                        {t("tasks.pause")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator className="bg-white/5" />
@@ -183,7 +198,7 @@ export function TaskDetailSheet({
                       onClick={() => onDelete?.(task.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Удалить
+                      {t("common.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -214,7 +229,7 @@ export function TaskDetailSheet({
                   className="w-full h-11 gap-2.5 bg-violet-500 hover:bg-violet-600 text-white font-medium rounded-lg"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  Завершить задачу
+                  {t("tasks.completeTask")}
                 </Button>
               )}
 
@@ -225,7 +240,7 @@ export function TaskDetailSheet({
                     <Check className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-medium text-emerald-400">Задача выполнена</p>
+                    <p className="font-medium text-emerald-400">{t("tasks.completeSuccess")}</p>
                     {task.completedAt && (
                       <p className="text-sm text-emerald-500/70">
                         {formatCreatedDate(task.completedAt)}
@@ -239,7 +254,7 @@ export function TaskDetailSheet({
               {task.description && (
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                    Описание
+                    {t("tasks.description")}
                   </h4>
                   <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
                     {task.description}
@@ -252,11 +267,11 @@ export function TaskDetailSheet({
                 {/* Priority */}
                 <div className="p-4 bg-white/5 rounded-xl">
                   <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                    Приоритет
+                    {t("tasks.priority")}
                   </h4>
                   <div className="flex items-center gap-2">
                     <span className={cn("h-2.5 w-2.5 rounded-full", PRIORITY_DOTS[task.priority])} />
-                    <span className="font-medium text-white">{priorityConfig.label}</span>
+                    <span className="font-medium text-white">{priorityLabel}</span>
                   </div>
                 </div>
 
@@ -269,7 +284,7 @@ export function TaskDetailSheet({
                     "text-xs font-medium uppercase tracking-wide mb-2",
                     isOverdue ? "text-red-400" : "text-gray-500"
                   )}>
-                    Срок
+                    {t("tasks.dueDate")}
                   </h4>
                   {task.dueDate ? (
                     <div className={cn(
@@ -287,7 +302,7 @@ export function TaskDetailSheet({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-gray-500">Не указан</span>
+                    <span className="text-gray-500">{t("tasks.noDueDate")}</span>
                   )}
                 </div>
               </div>
@@ -298,7 +313,7 @@ export function TaskDetailSheet({
                 <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
                   <div className="flex items-center gap-2.5">
                     <User className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-400">Исполнитель</span>
+                    <span className="text-sm text-gray-400">{t("tasks.assignee")}</span>
                   </div>
                   {task.assignee ? (
                     <div className="flex items-center gap-2.5">
@@ -311,7 +326,7 @@ export function TaskDetailSheet({
                       <span className="font-medium text-white">{task.assignee.name}</span>
                     </div>
                   ) : (
-                    <span className="text-gray-500 text-sm">Не назначен</span>
+                    <span className="text-gray-500 text-sm">{t("common.notAssigned")}</span>
                   )}
                 </div>
 
@@ -320,7 +335,7 @@ export function TaskDetailSheet({
                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
                     <div className="flex items-center gap-2.5">
                       <User className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-400">Автор</span>
+                      <span className="text-sm text-gray-400">{t("tasks.author")}</span>
                     </div>
                     <div className="flex items-center gap-2.5">
                       <Avatar className="h-7 w-7 border border-white/10">
@@ -339,14 +354,14 @@ export function TaskDetailSheet({
               {(task.contact || task.deal) && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Связи
+                    {t("tasks.links")}
                   </h4>
 
                   {task.contact && (
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl group hover:bg-white/10 cursor-pointer">
                       <div className="flex items-center gap-2.5">
                         <User className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-400">Контакт</span>
+                        <span className="text-sm text-gray-400">{t("common.contact")}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-white">{task.contact.name}</span>
@@ -359,7 +374,7 @@ export function TaskDetailSheet({
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl group hover:bg-white/10 cursor-pointer">
                       <div className="flex items-center gap-2.5">
                         <Briefcase className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-400">Сделка</span>
+                        <span className="text-sm text-gray-400">{t("tasks.deal")}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-white">{task.deal.title}</span>
@@ -375,7 +390,7 @@ export function TaskDetailSheet({
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Чеклист
+                      {t("tasks.checklist")}
                     </h4>
                     <span className="text-sm font-semibold text-gray-300">
                       {completedChecklist}/{totalChecklist}
@@ -428,7 +443,7 @@ export function TaskDetailSheet({
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                     <Tag className="h-3.5 w-3.5" />
-                    Теги
+                    {t("tasks.tags")}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {task.tags.map((tag) => (
@@ -447,15 +462,15 @@ export function TaskDetailSheet({
               <div className="pt-4 border-t border-white/5">
                 <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
-                  История
+                  {t("tasks.historyTitle")}
                 </h4>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Создано</span>
+                    <span className="text-gray-500">{t("common.createdAt")}</span>
                     <span className="font-medium text-gray-300">{formatCreatedDate(task.createdAt)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Обновлено</span>
+                    <span className="text-gray-500">{t("common.updatedAt")}</span>
                     <span className="font-medium text-gray-300">{task.updatedAt ? formatCreatedDate(task.updatedAt) : '—'}</span>
                   </div>
                 </div>
@@ -472,7 +487,7 @@ export function TaskDetailSheet({
                 onClick={() => onEdit?.(task)}
               >
                 <Edit className="h-4 w-4" />
-                Редактировать
+                {t("common.edit")}
               </Button>
               <Button
                 variant="outline"

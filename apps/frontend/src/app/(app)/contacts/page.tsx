@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { contactsApi } from "@/lib/api";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useTranslation } from "@/components/providers/language-provider";
 import { toast } from "sonner";
 
 interface Contact {
@@ -62,6 +63,7 @@ const getCompanyName = (company?: string | { id: string; name: string }): string
 };
 
 export default function ContactsPage() {
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState<Contact[]>([]);
 
   // Fetch contacts from API
@@ -191,9 +193,9 @@ export default function ContactsPage() {
       a.download = `contacts-${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
-      toast.success("Контакты выгружены");
+      toast.success(t("contacts.exportSuccess"));
     } catch (e: any) {
-      toast.error(e.response?.data?.message || "Не удалось экспортировать");
+      toast.error(e.response?.data?.message || t("contacts.exportError"));
     } finally {
       setIsExporting(false);
     }
@@ -208,12 +210,12 @@ export default function ContactsPage() {
     try {
       const res = await contactsApi.import(file);
       const count = res.data?.imported ?? res.data?.count ?? 0;
-      toast.success(`Импортировано контактов: ${count}`);
+      toast.success(t("contacts.importSuccess", { count }));
       const listRes = await contactsApi.getAll();
       const items = listRes.data?.items || listRes.data?.data || listRes.data || [];
       setContacts((Array.isArray(items) ? items : []).map(normalizeContact));
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Не удалось импортировать");
+      toast.error(err.response?.data?.message || t("contacts.importError"));
     } finally {
       setIsImporting(false);
       if (importInputRef.current) importInputRef.current.value = "";
@@ -303,23 +305,23 @@ export default function ContactsPage() {
       <div className="px-4 sm:px-6 py-4 glass-card border-b border-white/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Контакты</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">{t("contacts.title")}</h1>
 
             {/* Stats Pills - hidden on mobile */}
             <div className="hidden lg:flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
                 <User className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Всего</span>
+                <span className="text-sm text-gray-400">{t("contacts.total")}</span>
                 <span className="text-sm font-bold text-white">{totalContacts}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-lg">
                 <Star className="w-4 h-4 text-amber-500" />
-                <span className="text-sm text-amber-400">Избранные</span>
+                <span className="text-sm text-amber-400">{t("contacts.favorites")}</span>
                 <span className="text-sm font-bold text-amber-400">{favoriteContacts}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 rounded-lg">
                 <Building2 className="w-4 h-4 text-violet-500" />
-                <span className="text-sm text-violet-400">С компанией</span>
+                <span className="text-sm text-violet-400">{t("contacts.withCompany")}</span>
                 <span className="text-sm font-bold text-violet-400">{withCompany}</span>
               </div>
             </div>
@@ -331,7 +333,7 @@ export default function ContactsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Поиск..."
+                placeholder={t("common.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full sm:w-48 lg:w-72 pl-10 pr-4 py-2.5 bg-white/5 rounded-xl text-sm text-white placeholder-gray-400 border border-white/10 focus:ring-2 focus:ring-violet-500 focus:border-transparent focus:bg-white/10"
@@ -373,7 +375,7 @@ export default function ContactsPage() {
             <button
               onClick={handleExport}
               disabled={isExporting}
-              title="Экспорт в Excel"
+              title={t("contacts.exportExcel")}
               className="hidden sm:block p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-50"
             >
               <Download className="w-5 h-5 text-gray-400" />
@@ -381,7 +383,7 @@ export default function ContactsPage() {
             <button
               onClick={handleImportClick}
               disabled={isImporting}
-              title="Импорт из Excel/CSV"
+              title={t("contacts.importExcel")}
               className="hidden sm:block p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-50"
             >
               <Upload className="w-5 h-5 text-gray-400" />
@@ -400,7 +402,7 @@ export default function ContactsPage() {
               className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-violet-500 text-white rounded-xl text-sm font-semibold hover:bg-purple-500 shadow-sm"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Новый контакт</span>
+              <span className="hidden sm:inline">{t("contacts.newContact")}</span>
             </button>
           </div>
         </div>
@@ -442,7 +444,7 @@ export default function ContactsPage() {
                   onClick={() => handleSort("name")}
                   className="flex-1 min-w-[200px] flex items-center gap-2 px-4 h-full hover:bg-white/5 text-left"
                 >
-                  <span className="font-semibold text-gray-300">Контакт</span>
+                  <span className="font-semibold text-gray-300">{t("contacts.colContact")}</span>
                   {sortField === "name" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
@@ -452,25 +454,25 @@ export default function ContactsPage() {
                   onClick={() => handleSort("company")}
                   className="w-[180px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-l border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Компания</span>
+                  <span className="font-semibold text-gray-300">{t("contacts.colCompany")}</span>
                   {sortField === "company" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 <div className="w-[200px] flex items-center px-4 h-full border-l border-white/5">
-                  <span className="font-semibold text-gray-300">Контактные данные</span>
+                  <span className="font-semibold text-gray-300">{t("contacts.colContactData")}</span>
                 </div>
 
                 <div className="w-[140px] flex items-center px-4 h-full border-l border-white/5">
-                  <span className="font-semibold text-gray-300">Теги</span>
+                  <span className="font-semibold text-gray-300">{t("contacts.colTags")}</span>
                 </div>
 
                 <button
                   onClick={() => handleSort("createdAt")}
                   className="w-[130px] flex items-center gap-2 px-4 h-full hover:bg-white/5 border-l border-white/5"
                 >
-                  <span className="font-semibold text-gray-300">Добавлен</span>
+                  <span className="font-semibold text-gray-300">{t("contacts.colAdded")}</span>
                   {sortField === "createdAt" && (
                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
@@ -529,22 +531,22 @@ export default function ContactsPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
-                            Просмотреть
+                            {t("common.view")}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(contact); }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5"
                           >
                             <Pencil className="w-4 h-4 text-gray-400" />
-                            Редактировать
+                            {t("common.edit")}
                           </button>
                           <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5">
                             <MessageSquare className="w-4 h-4 text-gray-400" />
-                            Написать
+                            {t("contacts.write")}
                           </button>
                           <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                            Запланировать
+                            {t("contacts.schedule")}
                           </button>
                           <div className="border-t border-white/5 my-1" />
                           <button
@@ -552,7 +554,7 @@ export default function ContactsPage() {
                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10"
                           >
                             <Trash2 className="w-4 h-4 text-red-400" />
-                            Удалить
+                            {t("common.delete")}
                           </button>
                         </div>
                       )}
@@ -651,7 +653,7 @@ export default function ContactsPage() {
                   <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                     <User className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-400 font-medium">Контакты не найдены</p>
+                  <p className="text-gray-400 font-medium">{t("contacts.noContacts")}</p>
                 </div>
               )}
               </div>
@@ -660,16 +662,16 @@ export default function ContactsPage() {
             {/* Selected Actions Bar */}
             {selectedContacts.size > 0 && (
               <div className="bg-violet-500 text-white px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
-                <span className="font-medium text-sm sm:text-base whitespace-nowrap">Выбрано: {selectedContacts.size}</span>
+                <span className="font-medium text-sm sm:text-base whitespace-nowrap">{t("common.selected", { count: selectedContacts.size })}</span>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <button className="hidden sm:block px-4 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
-                    Добавить тег
+                    {t("contacts.addTag")}
                   </button>
                   <button className="hidden sm:block px-4 py-1.5 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
-                    Экспорт
+                    {t("common.export")}
                   </button>
                   <button className="px-3 sm:px-4 py-1.5 bg-red-500 rounded-lg text-sm font-medium hover:bg-red-600">
-                    Удалить
+                    {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -768,7 +770,7 @@ export default function ContactsPage() {
             />
             <div className="fixed inset-0 md:inset-auto md:relative md:w-96 w-full glass-card md:border-l border-white/10 flex flex-col z-[70]">
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="font-semibold text-white">Профиль контакта</h3>
+                <h3 className="font-semibold text-white">{t("contacts.profile")}</h3>
                 <button
                   onClick={() => setSelectedContact(null)}
                   className="p-1.5 hover:bg-white/5 rounded-lg"
@@ -795,24 +797,24 @@ export default function ContactsPage() {
               <div className="flex justify-center gap-2 mb-6">
                 <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 text-white rounded-xl font-medium hover:bg-purple-500">
                   <Phone className="w-4 h-4" />
-                  Позвонить
+                  {t("contacts.call")}
                 </button>
                 <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 text-gray-300 rounded-xl font-medium hover:bg-white/10">
                   <Mail className="w-4 h-4" />
-                  Написать
+                  {t("contacts.write")}
                 </button>
               </div>
 
               {/* Contact Info */}
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Контактная информация</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t("contacts.contactInfo")}</p>
                   <div className="bg-white/5 rounded-xl p-4 space-y-3">
                     {selectedContact.email && (
                       <div className="flex items-center gap-3">
                         <Mail className="w-5 h-5 text-gray-400" />
                         <div>
-                          <p className="text-xs text-gray-500">Email</p>
+                          <p className="text-xs text-gray-500">{t("common.email")}</p>
                           <p className="text-sm font-medium text-white">{selectedContact.email}</p>
                         </div>
                       </div>
@@ -821,7 +823,7 @@ export default function ContactsPage() {
                       <div className="flex items-center gap-3">
                         <Phone className="w-5 h-5 text-gray-400" />
                         <div>
-                          <p className="text-xs text-gray-500">Телефон</p>
+                          <p className="text-xs text-gray-500">{t("common.phone")}</p>
                           <p className="text-sm font-medium text-white">{selectedContact.phone}</p>
                         </div>
                       </div>
@@ -831,7 +833,7 @@ export default function ContactsPage() {
 
                 {getCompanyName(selectedContact.company) && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Компания</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t("common.company")}</p>
                     <div className="bg-white/5 rounded-xl p-4">
                       <div className="flex items-center gap-3">
                         <Building2 className="w-5 h-5 text-gray-400" />
@@ -848,7 +850,7 @@ export default function ContactsPage() {
 
                 {selectedContact.tags && selectedContact.tags.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Теги</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t("contacts.colTags")}</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedContact.tags.map((tag: string) => {
                         const colors = tagColors[tag] || { bg: "bg-white/10", text: "text-gray-300" };
@@ -870,12 +872,12 @@ export default function ContactsPage() {
                 )}
 
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Информация</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t("contacts.information")}</p>
                   <div className="bg-white/5 rounded-xl p-4">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-gray-400" />
                       <div>
-                        <p className="text-xs text-gray-500">Добавлен</p>
+                        <p className="text-xs text-gray-500">{t("contacts.colAdded")}</p>
                         <p className="text-sm font-medium text-white">{formatDate(selectedContact.createdAt)}</p>
                       </div>
                     </div>
@@ -891,14 +893,14 @@ export default function ContactsPage() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 text-white hover:bg-purple-500 rounded-xl font-medium"
               >
                 <Pencil className="w-4 h-4" />
-                Редактировать
+                {t("common.edit")}
               </button>
               <button
                 onClick={() => handleOpenDeleteDialog(selectedContact)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-red-400 hover:bg-red-500/10 rounded-xl font-medium"
               >
                 <Trash2 className="w-4 h-4" />
-                Удалить контакт
+                {t("contacts.deleteContact")}
               </button>
             </div>
             </div>
@@ -920,10 +922,10 @@ export default function ContactsPage() {
         isOpen={isDeleteDialogOpen}
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
-        title="Удалить контакт?"
-        description={`Вы уверены, что хотите удалить контакт "${deletingContact?.firstName} ${deletingContact?.lastName}"? Это действие нельзя отменить.`}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("contacts.deleteConfirm")}
+        description={t("contacts.deleteConfirmNamed", { name: `${deletingContact?.firstName ?? ""} ${deletingContact?.lastName ?? ""}`.trim() })}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         isLoading={isDeleting}
       />
